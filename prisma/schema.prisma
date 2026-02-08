@@ -5,9 +5,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql" // 👈 CAMBIO 1: Antes era sqlite
+  url      = env("POSTGRES_PRISMA_URL") // 👈 CAMBIO 2: Variable de Vercel
+  directUrl = env("POSTGRES_URL_NON_POOLING") // 👈 CAMBIO 3: Conexión directa
 }
+
+// ... (el resto de tus modelos User, Card, etc. sigue igual)
 
 // --------------------------------------
 // 1. USUARIOS (Híbrido: Web2 + Web3)
