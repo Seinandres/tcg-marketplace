@@ -6,11 +6,14 @@ import Link from "next/link";
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  // 1. Buscamos en la base de datos las cartas publicadas
-  // Por ahora, para que veas datos, traemos las últimas del marketplace
+  // 1. CORRECCIÓN: Ahora incluimos el set dentro de la carta para evitar el error de 'undefined'
   const myListings = await prisma.listing.findMany({
     include: {
-      card: true,
+      card: {
+        include: {
+          set: true // 👈 ESTA ES LA MAGIA QUE FALTABA
+        }
+      },
     },
     take: 10,
     orderBy: { createdAt: 'desc' }
@@ -20,13 +23,13 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-slate-950 text-white p-6 md:p-12">
       <div className="max-w-7xl mx-auto">
         
-        {/* Encabezado Profesional */}
+        {/* Encabezado */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
             <h1 className="text-4xl font-black mb-2 tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
               Panel de Control
             </h1>
-            <p className="text-gray-400 font-medium italic">Gestión de inventario para @AshKetchum</p>
+            <p className="text-gray-400 font-medium italic">Gestión de inventario para Jorge Donoso</p>
           </div>
           <Link 
             href="/sell" 
@@ -36,7 +39,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Resumen de Stock (Estilo Logística) */}
+        {/* Resumen de Stock */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">📦</div>
@@ -46,7 +49,7 @@ export default async function DashboardPage() {
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">💰</div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Valor Estimado</p>
-            <p className="text-5xl font-black text-blue-500">---</p>
+            <p className="text-5xl font-black text-blue-500">$---</p>
           </div>
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">📧</div>
@@ -55,7 +58,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Listado de Inventario */}
+        {/* Tabla de Inventario */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
           <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/30">
             <h2 className="text-xl font-bold italic tracking-tight">Tu Bodega Digital</h2>
@@ -84,7 +87,10 @@ export default async function DashboardPage() {
                       </div>
                       <div>
                         <p className="font-black text-white text-lg leading-none mb-1">{item.card.name}</p>
-                        <p className="text-[10px] font-mono text-gray-500 uppercase">{item.card.set.name} • #{item.card.number}</p>
+                        {/* 2. PROTECCIÓN: Usamos '?' por si acaso alguna carta no tiene set asignado */}
+                        <p className="text-[10px] font-mono text-gray-500 uppercase">
+                          {item.card.set?.name || 'Set Desconocido'} • #{item.card.number}
+                        </p>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-center">
@@ -99,7 +105,7 @@ export default async function DashboardPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex justify-center gap-4">
-                        <button className="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">Editar</button>
+                        <button className="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest">Editar</button>
                         <button className="text-xs font-bold text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest">Retirar</button>
                       </div>
                     </td>
