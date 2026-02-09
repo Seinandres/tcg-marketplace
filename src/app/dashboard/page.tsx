@@ -2,20 +2,17 @@
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
+import { deleteListing } from "@/lib/actions"; // Importamos la nueva acción
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  // 1. CORRECCIÓN: Ahora incluimos el set dentro de la carta para evitar el error de 'undefined'
   const myListings = await prisma.listing.findMany({
     include: {
       card: {
-        include: {
-          set: true // 👈 ESTA ES LA MAGIA QUE FALTABA
-        }
+        include: { set: true }
       },
     },
-    take: 10,
     orderBy: { createdAt: 'desc' }
   });
 
@@ -39,32 +36,13 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Resumen de Stock */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">📦</div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Publicaciones Activas</p>
-            <p className="text-5xl font-black text-purple-500">{myListings.length}</p>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">💰</div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Valor Estimado</p>
-            <p className="text-5xl font-black text-blue-500">$---</p>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl group-hover:scale-110 transition-transform">📧</div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Interesados</p>
-            <p className="text-5xl font-black text-green-500">0</p>
-          </div>
-        </div>
-
         {/* Tabla de Inventario */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
           <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/30">
             <h2 className="text-xl font-bold italic tracking-tight">Tu Bodega Digital</h2>
-            <div className="flex gap-2">
-               <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-               <span className="text-[10px] text-gray-500 uppercase font-black tracking-tighter">Sistema Sincronizado</span>
+            <div className="flex gap-2 text-[10px] text-gray-500 uppercase font-black tracking-tighter items-center">
+               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+               Sincronizado
             </div>
           </div>
 
@@ -82,31 +60,52 @@ export default async function DashboardPage() {
                 {myListings.map((item) => (
                   <tr key={item.id} className="hover:bg-purple-500/5 transition-colors group">
                     <td className="px-8 py-6 flex items-center gap-6">
-                      <div className="relative w-14 h-20 shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <div className="relative w-14 h-20 shrink-0">
                         <Image src={item.card.imageUrlSmall} alt={item.card.name} fill className="object-contain" />
                       </div>
                       <div>
                         <p className="font-black text-white text-lg leading-none mb-1">{item.card.name}</p>
-                        {/* 2. PROTECCIÓN: Usamos '?' por si acaso alguna carta no tiene set asignado */}
                         <p className="text-[10px] font-mono text-gray-500 uppercase">
-                          {item.card.set?.name || 'Set Desconocido'} • #{item.card.number}
+                          {item.card.set?.name} • #{item.card.number}
                         </p>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-center">
-                      <span className="bg-slate-800 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      <span className="bg-slate-800 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase">
                         {item.condition}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <p className="font-black text-xl text-white tracking-tighter">
+                      <p className="font-black text-xl text-white">
                         ${item.price.toLocaleString('es-CL')}
                       </p>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex justify-center gap-4">
-                        <button className="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest">Editar</button>
-                        <button className="text-xs font-bold text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest">Retirar</button>
+                        {/* Botón Editar (Lógica de enlace pendiente) */}
+                        <Link 
+                          href={`/sell/edit/${item.id}`}
+                          className="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest"
+                        >
+                          Editar
+                        </Link>
+                        
+                        {/* BOTÓN RETIRAR CON FUNCIONALIDAD */}
+                        <form action={async () => {
+                          "use server";
+                          await deleteListing(item.id);
+                        }}>
+                          <button 
+                            type="submit"
+                            className="text-xs font-bold text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest"
+                            onClick={() => {
+                              // Esto es opcional, pero ayuda al usuario localmente
+                              if(!confirm("¿Estás seguro de retirar este producto de la bodega?")) return false;
+                            }}
+                          >
+                            Retirar
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>
@@ -116,7 +115,7 @@ export default async function DashboardPage() {
             
             {myListings.length === 0 && (
               <div className="text-center py-20 bg-slate-950/20">
-                <p className="text-gray-600 font-bold italic">La bodega está vacía. Comienza a publicar tus productos.</p>
+                <p className="text-gray-600 font-bold italic">La bodega está vacía.</p>
               </div>
             )}
           </div>
