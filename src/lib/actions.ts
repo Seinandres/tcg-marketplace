@@ -3,19 +3,36 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-// Función para eliminar una publicación (Botón Retirar)
 export async function deleteListing(id: string) {
   try {
-    await prisma.listing.delete({
-      where: { id: id },
-    });
-    
-    // Esto obliga a Next.js a refrescar el Dashboard para mostrar los datos actualizados
+    await prisma.listing.delete({ where: { id: id } });
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error al eliminar:", error);
-    return { success: false, error: "No se pudo retirar la carta" };
+    return { success: false, error: "No se pudo retirar" };
   }
+}
+
+// NUEVA FUNCIÓN PARA EDITAR
+export async function updateListing(formData: FormData) {
+  const id = formData.get("id") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const condition = formData.get("condition") as string;
+
+  try {
+    await prisma.listing.update({
+      where: { id: id },
+      data: {
+        price: price,
+        condition: condition,
+      },
+    });
+  } catch (error) {
+    return { error: "Error al actualizar los datos" };
+  }
+
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
 }
