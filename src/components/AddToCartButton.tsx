@@ -1,25 +1,37 @@
-'use client'
+"use client";
 
-import { useCart } from "../context/CartContext"
+import { useCart } from "@/context/CartContext";
+import { useState } from "react";
 
-interface Props {
-  card: {
-    id: string
-    name: string
-    price: number
-    image: string
-  }
-}
+// 👇 IMPORTANTE: 'export function' para que coincida con las llaves { } del import
+export function AddToCartButton({ card }: { card: any }) {
+  const { addToCart } = useCart();
+  const [isAdded, setIsAdded] = useState(false);
 
-export default function AddToCartButton({ card }: Props) {
-  const { addToCart } = useCart()
+  const handleClick = () => {
+    addToCart({
+      id: card.id,
+      name: card.name,
+      price: card.price,
+      image: card.image,
+    });
+    
+    // Feedback visual (cambia de color un ratito)
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 2000);
+  };
 
   return (
-    <button 
-      onClick={() => addToCart(card)}
-      className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-5 px-8 rounded-xl transition-all shadow-lg shadow-purple-900/30 text-lg hover:-translate-y-1 active:scale-95"
+    <button
+      onClick={handleClick}
+      disabled={isAdded}
+      className={`w-full px-4 py-2 rounded-lg font-bold transition-all transform active:scale-95 ${
+        isAdded
+          ? "bg-green-600 text-white shadow-inner"
+          : "bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 hover:border-purple-500"
+      }`}
     >
-      Añadir al Carro 🛒
+      {isAdded ? "✅ Agregado" : "+ Carro"}
     </button>
-  )
+  );
 }
