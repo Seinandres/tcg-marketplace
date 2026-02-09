@@ -1,15 +1,13 @@
 "use client";
 
-import { useCart } from "@/context/CartContext"; // Asegúrate que esta ruta exista
+import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation"; // 👈 IMPORTANTE
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const router = useRouter(); // 👈 1. INICIALIZAR ROUTER
 
   // Calcular total
   const total = cart.reduce((sum, item) => sum + item.price, 0);
@@ -17,13 +15,14 @@ export default function CartPage() {
   const handleCheckout = async () => {
     setIsCheckingOut(true);
 
-    // Simulamos una espera de 2 segundos (como si procesara el pago)
+    // Simulamos proceso de pago
     setTimeout(() => {
-      clearCart(); // Vaciamos el carro
-      router.push("/checkout/success"); // 👈 2. REDIRIGIR A LA PÁGINA DE ÉXITO
-    }, 2000);
+      clearCart();
+      // Usamos window.location para forzar la redirección segura
+      window.location.href = "/checkout/success"; 
+    }, 1500);
   };
-  
+
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
@@ -50,12 +49,11 @@ export default function CartPage() {
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LISTA DE ITEMS (Izquierda) */}
+        {/* LISTA DE ITEMS */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item) => (
             <div key={item.uniqueId || item.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4 hover:border-purple-500/50 transition-colors">
               
-              {/* Imagen Pequeña */}
               <div className="relative w-20 h-28 bg-slate-800 rounded-lg overflow-hidden shrink-0">
                 <Image 
                   src={item.image} 
@@ -65,13 +63,11 @@ export default function CartPage() {
                 />
               </div>
 
-              {/* Info */}
               <div className="flex-1">
                 <h3 className="font-bold text-lg">{item.name}</h3>
                 <p className="text-gray-400 text-sm">Cantidad: 1</p>
               </div>
 
-              {/* Precio y Eliminar */}
               <div className="text-right">
                 <p className="text-xl font-bold text-green-400 mb-2">
                   ${item.price.toLocaleString("es-CL")}
@@ -87,7 +83,7 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* RESUMEN DE PAGO (Derecha) */}
+        {/* RESUMEN DE PAGO */}
         <div className="lg:col-span-1">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl sticky top-4 shadow-2xl">
             <h2 className="text-xl font-bold mb-4 border-b border-slate-800 pb-4">Resumen de Orden</h2>
@@ -117,7 +113,7 @@ export default function CartPage() {
             </button>
 
             <p className="text-xs text-center text-gray-500 mt-4">
-              Pagos seguros vía Webpay / Stripe (Próximamente)
+              Pagos seguros vía Webpay / Stripe
             </p>
           </div>
         </div>
