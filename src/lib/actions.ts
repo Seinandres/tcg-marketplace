@@ -11,11 +11,11 @@ export async function deleteListing(id: string) {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    return { success: false, error: "No se pudo retirar" };
+    console.error("Error Delete:", error);
+    return { success: false, error: "Error al retirar" };
   }
 }
 
-// NUEVA FUNCIÓN PARA EDITAR
 export async function updateListing(formData: FormData) {
   const id = formData.get("id") as string;
   const price = parseFloat(formData.get("price") as string);
@@ -24,15 +24,37 @@ export async function updateListing(formData: FormData) {
   try {
     await prisma.listing.update({
       where: { id: id },
-      data: {
-        price: price,
-        condition: condition,
-      },
+      data: { price, condition },
     });
   } catch (error) {
-    return { error: "Error al actualizar los datos" };
+    console.error("Error Update:", error);
+    return { error: "No se pudo actualizar" };
   }
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
+}
+
+export async function processCheckout(cartItems: any[]) {
+  if (!cartItems || cartItems.length === 0) return { success: false, error: "Carro vacío" };
+
+  try {
+    // Transacción atómica para marcar como vendida
+    await prisma.$transaction(
+      cartItems.map((item) =>
+        prisma.listing.update({
+          where: { id: item.id }, // Ahora sí recibirá el ID correcto de la oferta
+          data: { status: 'SOLD' },
+        })
+      )
+    );
+
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    // Esto te dirá exactamente qué ID falló en tu terminal
+    console.error("DETALLE ERROR CHECKOUT:", error);
+    return { success: false, error: "Error en la base de datos" };
+  }
 }

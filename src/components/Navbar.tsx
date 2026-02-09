@@ -39,7 +39,7 @@ export default function Navbar() {
             href="/dashboard" 
             className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition-colors"
           >
-            <span>👤</span> Mis Cartas
+            <span>👤</span> Ver mis Cartas publicadas
           </Link>
 
           <Link 

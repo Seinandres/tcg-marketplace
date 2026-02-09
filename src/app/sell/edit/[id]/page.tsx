@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default async function EditPage({ params }: { params: { id: string } }) {
+export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const listing = await prisma.listing.findUnique({
@@ -31,7 +31,7 @@ export default async function EditPage({ params }: { params: { id: string } }) {
             </div>
             <div>
               <p className="text-xl font-black uppercase italic">{listing.card.name}</p>
-              <p className="text-xs text-gray-500 font-mono uppercase tracking-tighter">{listing.card.id}</p>
+              <p className="text-xs text-gray-500 font-mono uppercase tracking-tighter">SKU: {listing.card.id}</p>
             </div>
           </div>
 
