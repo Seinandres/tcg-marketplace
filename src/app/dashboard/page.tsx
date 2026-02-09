@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
-import { deleteListing } from "@/lib/actions"; // Importamos la nueva acción
+import { DeleteListingButton } from "@/components/DeleteListingButton"; // Importamos el nuevo botón
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
             <h2 className="text-xl font-bold italic tracking-tight">Tu Bodega Digital</h2>
             <div className="flex gap-2 text-[10px] text-gray-500 uppercase font-black tracking-tighter items-center">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-               Sincronizado
+               Sincronizado con Stock
             </div>
           </div>
 
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
                 {myListings.map((item) => (
                   <tr key={item.id} className="hover:bg-purple-500/5 transition-colors group">
                     <td className="px-8 py-6 flex items-center gap-6">
-                      <div className="relative w-14 h-20 shrink-0">
+                      <div className="relative w-14 h-20 shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <Image src={item.card.imageUrlSmall} alt={item.card.name} fill className="object-contain" />
                       </div>
                       <div>
@@ -81,8 +81,7 @@ export default async function DashboardPage() {
                       </p>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex justify-center gap-4">
-                        {/* Botón Editar (Lógica de enlace pendiente) */}
+                      <div className="flex justify-center gap-6">
                         <Link 
                           href={`/sell/edit/${item.id}`}
                           className="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest"
@@ -90,22 +89,8 @@ export default async function DashboardPage() {
                           Editar
                         </Link>
                         
-                        {/* BOTÓN RETIRAR CON FUNCIONALIDAD */}
-                        <form action={async () => {
-                          "use server";
-                          await deleteListing(item.id);
-                        }}>
-                          <button 
-                            type="submit"
-                            className="text-xs font-bold text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest"
-                            onClick={() => {
-                              // Esto es opcional, pero ayuda al usuario localmente
-                              if(!confirm("¿Estás seguro de retirar este producto de la bodega?")) return false;
-                            }}
-                          >
-                            Retirar
-                          </button>
-                        </form>
+                        {/* BOTÓN RETIRAR SEGURO */}
+                        <DeleteListingButton id={item.id} />
                       </div>
                     </td>
                   </tr>
