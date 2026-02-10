@@ -1,16 +1,20 @@
-// @ts-nocheck
 "use client";
 
 import { deleteListing } from "@/lib/actions";
 
-export function DeleteListingButton({ id }: { id: string }) {
+interface Props {
+  id: string;
+  onSuccess: () => void; // 👈 Función para refrescar la lista
+}
+
+export function DeleteListingButton({ id, onSuccess }: Props) {
   const handleDelete = async () => {
-    const confirmDelete = confirm("¿Estás seguro de retirar este producto de la bodega?");
-    
-    if (confirmDelete) {
+    if (confirm("¿Estás seguro de retirar este producto de la bodega?")) {
       const result = await deleteListing(id);
-      if (!result.success) {
-        alert("Error: " + result.error);
+      if (result.success) {
+        onSuccess(); // 👈 Esto hace que la carta desaparezca de la vista al instante
+      } else {
+        alert("Error al retirar: " + result.error);
       }
     }
   };
@@ -18,9 +22,9 @@ export function DeleteListingButton({ id }: { id: string }) {
   return (
     <button 
       onClick={handleDelete}
-      className="text-xs font-bold text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest"
+      className="text-[10px] font-black text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest"
     >
-      Retirar
+      RETIRAR
     </button>
   );
 }

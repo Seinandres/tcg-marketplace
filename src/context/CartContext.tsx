@@ -1,14 +1,18 @@
+// @ts-nocheck
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-// Definimos cómo se ve un ítem del carro
 type CartItem = {
   id: string;
-  name: string;
   price: number;
-  image: string;
-  uniqueId?: string; // Para diferenciar si compras la misma carta 2 veces
+  card: {
+    name: string;
+    imageUrlSmall: string;
+    set: {
+      name: string;
+    };
+  };
 };
 
 type CartContextType = {
@@ -20,34 +24,45 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Cargar carro desde localStorage al iniciar
+  // 1. Cargar del LocalStorage al iniciar
   useEffect(() => {
-    const savedCart = localStorage.getItem("tcg-cart");
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+    const storedCart = localStorage.getItem("seina_cart");
+    if (storedCart) {
+      try {
+        setCart(JSON.parse(storedCart));
+      } catch (e) {
+        console.error("Error al cargar carrito", e);
+      }
     }
   }, []);
 
-  // Guardar carro en localStorage cada vez que cambia
+  // 2. Guardar en LocalStorage cada vez que cambia
   useEffect(() => {
-    localStorage.setItem("tcg-cart", JSON.stringify(cart));
+    localStorage.setItem("seina_cart", JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (item: CartItem) => {
-    // Agregamos un ID único temporal para listas
-    const newItem = { ...item, uniqueId: crypto.randomUUID() };
-    setCart((prev) => [...prev, newItem]);
+    // Evitar duplicados
+    if (!cart.some((i) => i.id === item.id)) {
+      // ⚠️ AQUÍ ESTÁ LA CLAVE: Aseguramos que el item tenga la estructura correcta
+      if (item.card && item.card.imageUrlSmall) {
+          setCart((prev) => [...prev, item]);
+      } else {
+          console.error("Intento de agregar item incompleto al carro:", item);
+      }
+    }
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== itemId && item.uniqueId !== itemId));
+  const removeFromCart = (id: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
   const clearCart = () => {
     setCart([]);
+    localStorage.removeItem("seina_cart");
   };
 
   return (
@@ -57,10 +72,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCart() {
+export const useCart = () => {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart debe usarse dentro de un CartProvider");
-  }
+  if (!context) throw new Error("useCart must be used within a CartProvider");
   return context;
-}
+};

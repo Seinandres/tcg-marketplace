@@ -1,61 +1,71 @@
+// @ts-nocheck
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/context/CartContext"; // Conectamos con el nuevo sistema
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useCart } from "@/context/CartContext"; // 👈 Recuperamos el contexto del carrito
 
 export default function Navbar() {
-  const { cart } = useCart(); // Extraemos 'cart' en lugar de 'items'
-  const [query, setQuery] = useState("");
+  const pathname = usePathname();
+  const { cart } = useCart(); // 👈 Obtenemos los items del carro
+  const cartCount = cart.length;
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <nav className="bg-slate-950/80 backdrop-blur-xl border-b border-slate-900 sticky top-0 z-50 px-6 py-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         
-        {/* LOGO */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-lg flex items-center justify-center font-black text-white shadow-lg group-hover:rotate-12 transition-transform">
-            T
+        {/* LOGO NEÓN SEINA MARKET */}
+        <Link href="/" className="group">
+          <div className="flex flex-col">
+            <span className="text-2xl font-black tracking-tighter italic text-white group-hover:text-purple-400 transition-colors duration-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+              SEINA<span className="text-purple-500">MARKET</span>
+            </span>
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-500 -mt-1">Chile Marketplace</span>
           </div>
-          <span className="hidden md:block font-black text-xl tracking-tighter text-white">
-            TCG <span className="text-purple-500">Chile</span>
-          </span>
         </Link>
 
-        {/* BUSCADOR */}
-        <form action="/search" className="flex-1 max-w-xl relative">
-          <input
-            type="text"
-            name="q"
-            placeholder="Buscar Charizard, Mew, 151..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-full py-2 px-10 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-white"
-          />
-          <span className="absolute left-3 top-2.5 text-gray-500 text-sm">🔍</span>
-        </form>
+        {/* NAVEGACIÓN CENTRAL */}
+        <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-gray-400">
+          <Link href="/" className={`hover:text-white transition-colors ${pathname === '/' ? 'text-purple-500' : ''}`}>Inicio</Link>
+          <Link href="/auctions" className="hover:text-white transition-colors">Subastas</Link>
+          <Link href="/sealed" className="hover:text-white transition-colors">Sellado</Link>
+          <Link href="/subscription" className={`hover:text-purple-400 transition-colors flex items-center gap-2 ${pathname === '/subscription' ? 'text-purple-400' : ''}`}>
+            ⭐ Premium
+          </Link>
+        </div>
 
-        {/* ACCIONES */}
-        <div className="flex items-center gap-2 md:gap-6">
+        {/* ACCIONES DE USUARIO Y CARRITO RESTAURADO */}
+        <div className="flex items-center gap-6">
           <Link 
             href="/dashboard" 
-            className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition-colors"
+            className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
           >
-            <span>👤</span> Ver mis Cartas publicadas
+            Mi Bodega
           </Link>
-
+          
           <Link 
             href="/sell" 
-            className="bg-green-600 hover:bg-green-500 text-white text-xs md:text-sm font-bold py-2 px-4 rounded-full flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all transform active:scale-95"
+            className="bg-white text-black text-[10px] font-black uppercase px-6 py-2.5 rounded-full hover:bg-purple-500 hover:text-white transition-all transform active:scale-95 shadow-lg shadow-white/5"
           >
-            💰 <span className="hidden xs:inline">Vender</span>
+            Vender Ahora
           </Link>
 
-          {/* CARRITO CON CONTADOR REAL */}
-          <Link href="/cart" className="relative p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors group">
-            <span className="text-xl">🛒</span>
-            {/* Aquí arreglamos el error: usamos 'cart.length' */}
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-slate-900 group-hover:scale-110 transition-transform">
-                {cart.length}
+          {/* BOTÓN DEL CARRITO (Restaurado según image_3313da.png) */}
+          <Link href="/cart" className="relative group p-2 bg-slate-900 rounded-xl border border-slate-800 hover:border-purple-500 transition-all">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5 text-gray-400 group-hover:text-purple-400 transition-colors" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            
+            {/* BADGE DE NOTIFICACIÓN ROJO */}
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shadow-lg animate-in zoom-in duration-300">
+                {cartCount}
               </span>
             )}
           </Link>

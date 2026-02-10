@@ -5,20 +5,18 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // 👈 CAMBIO 1: Antes era sqlite
-  url      = env("POSTGRES_PRISMA_URL") // 👈 CAMBIO 2: Variable de Vercel
-  directUrl = env("POSTGRES_URL_NON_POOLING") // 👈 CAMBIO 3: Conexión directa
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
-// ... (el resto de tus modelos User, Card, etc. sigue igual)
-
 // --------------------------------------
-// 1. USUARIOS (Híbrido: Web2 + Web3)
+// 1. USUARIOS & SUSCRIPCIONES
 // --------------------------------------
 
 model User {
   id            String    @id @default(uuid())
-  username      String    @unique
+  username      String?   @unique
   email         String?   @unique 
   walletAddress String?   @unique
   rut           String?
@@ -27,87 +25,153 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Relaciones Marketplace
   listings      Listing[] 
   purchases     Order[]   @relation("BuyerOrders")
   sales         Order[]   @relation("SellerOrders")
   cart          CartItem[]
+  
+  // Relación con Subastas (NUEVO)
+  bids          Bid[]
+
+  // Relación Suscripción
+  subscription  Subscription?
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  stripeCustomerId String   @unique
+  stripePriceId    String
+  status           String   
+  currentPeriodEnd DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 // --------------------------------------
-// 2. CATÁLOGO DE CARTAS
+// 2. CATÁLOGO DE CARTAS (Mapeado para no borrar datos)
 // --------------------------------------
 
-model CardSet {
-  id          String   @id @default(uuid())
-  name        String
-  code        String
-  releaseDate String?
-  totalCards  Int?
+model Set {
+  // Mapeamos a la tabla antigua 'CardSet' para no perder datos
+  @@map("CardSet") 
+
+  id           String    @id 
+  name         String
+  series       String?   
+  code         String?   
+  printedTotal Int?
   
-  cards       Card[]
+  // Mapeamos 'total' a la columna vieja 'totalCards'
+  total        Int?      @map("totalCards")
+  
+  releaseDate  String?
+  images       Json?     
+  updatedAt    DateTime  @updatedAt @default(now())
+  
+  cards        Card[]
 }
 
 model Card {
-  id          String   @id @default(uuid())
-  setId       String
+  id            String    @id @default(cuid())
   
-  name        String
-  number      String
-  rarity      String
+  // --- CAMPOS NUEVOS ---
+  game          String    @default("Pokemon")
+  supertype     String?   
+  subtypes      String[]
+  types         String[]
+  hp            String?
+  artist        String?
   
-  imageUrlSmall String 
-  imageUrlHiRes String?
+  imageUrlSmall String
   
+  // Mapeamos a columna vieja para no perder imágenes
+  imageUrlLarge String?   @map("imageUrlHiRes")
+  
+  // --- CAMPOS COMUNES ---
+  name          String
+  number        String
+  rarity        String?
+  
+  // --- CAMPOS LEGACY ---
   marketPrice   Float?
+  
+  // --- RELACIONES ---
+  setId         String
+  set           Set       @relation(fields: [setId], references: [id])
+  
+  listings      Listing[]
+  priceHistory  PriceHistory[]
 
-  set         CardSet  @relation(fields: [setId], references: [id])
-  listings    Listing[]
-  priceHistory PriceHistory[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt 
 }
 
 // --------------------------------------
-// 3. MARKETPLACE & LISTINGS
+// 3. MARKETPLACE & LISTINGS (Ventas y Subastas)
 // --------------------------------------
 
 model Listing {
-  id          String   @id @default(uuid())
-  userId      String
-  cardId      String
-  
-  price       Int
-  condition   String
-  quantity    Int      @default(1)
-  status      String   @default("ACTIVE")
-  
-  isNft       Boolean  @default(false)
+  id        String   @id @default(cuid())
+  userId    String   
+  user      User     @relation(fields: [userId], references: [id])
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Tipo de publicación: "SALE" (Venta) o "AUCTION" (Subasta)
+  type      String   @default("SALE") 
 
-  user        User     @relation(fields: [userId], references: [id])
-  card        Card     @relation(fields: [cardId], references: [id])
-  orders      Order[]
-  cartItems   CartItem[]
+  price     Int
+  condition String
+  quantity  Int      @default(1)
+  status    String   @default("ACTIVE") 
+  isNft     Boolean  @default(false)
+
+  // Relaciones
+  orders    Order[]
+  cartItems CartItem[]
+  bids      Bid[]    // Ofertas recibidas en subasta
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // --------------------------------------
-// 4. TRANSACCIONES
+// 4. SISTEMA DE SUBASTAS (NUEVO)
+// --------------------------------------
+
+model Bid {
+  id        String   @id @default(cuid())
+  amount    Int      // Monto de la oferta
+  createdAt DateTime @default(now())
+
+  userId    String   // Quién oferta
+  user      User     @relation(fields: [userId], references: [id])
+
+  listingId String   // En qué subasta
+  listing   Listing  @relation(fields: [listingId], references: [id])
+}
+
+// --------------------------------------
+// 5. TRANSACCIONES & CARRITO
 // --------------------------------------
 
 model Order {
-  id            String   @id @default(uuid())
-  buyerId       String
-  sellerId      String
-  listingId     String
+  id        String   @id @default(uuid())
+  buyerId   String
+  sellerId  String
+  listingId String
   
-  price         Int
-  status        String   @default("COMPLETED")
+  price     Int
+  status    String   @default("COMPLETED")
   
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  buyer         User     @relation("BuyerOrders", fields: [buyerId], references: [id])
-  seller        User     @relation("SellerOrders", fields: [sellerId], references: [id])
-  listing       Listing  @relation(fields: [listingId], references: [id])
+  buyer     User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller    User     @relation("SellerOrders", fields: [sellerId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id])
 }
 
 model CartItem {
@@ -121,14 +185,14 @@ model CartItem {
 }
 
 // --------------------------------------
-// 5. HISTORIAL DE PRECIOS
+// 6. HISTORIAL DE PRECIOS
 // --------------------------------------
 
 model PriceHistory {
-  id        String   @id @default(uuid())
-  cardId    String
-  date      DateTime @default(now())
-  price     Int
+  id      String   @id @default(uuid())
+  cardId  String
+  date    DateTime @default(now())
+  price   Int
   
-  card      Card     @relation(fields: [cardId], references: [id])
+  card    Card     @relation(fields: [cardId], references: [id])
 }

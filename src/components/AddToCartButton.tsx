@@ -1,37 +1,30 @@
+// @ts-nocheck
 "use client";
 
 import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 
-// 👇 IMPORTANTE: 'export function' para que coincida con las llaves { } del import
-export function AddToCartButton({ card }: { card: any }) {
+export default function AddToCartButton({ item }: { item: any }) {
   const { addToCart } = useCart();
-  const [isAdded, setIsAdded] = useState(false);
+  const [added, setAdded] = useState(false);
 
   const handleClick = () => {
-    addToCart({
-      id: card.id,
-      name: card.name,
-      price: card.price,
-      image: card.image,
-    });
-    
-    // Feedback visual (cambia de color un ratito)
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
+    addToCart(item);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000); // Feedback visual por 2 segundos
   };
 
   return (
     <button
       onClick={handleClick}
-      disabled={isAdded}
-      className={`w-full px-4 py-2 rounded-lg font-bold transition-all transform active:scale-95 ${
-        isAdded
-          ? "bg-green-600 text-white shadow-inner"
-          : "bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 hover:border-purple-500"
+      disabled={added}
+      className={`px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${
+        added 
+        ? "bg-green-500 text-white cursor-default" 
+        : "bg-white text-black hover:bg-purple-500 hover:text-white shadow-lg"
       }`}
     >
-      {isAdded ? "✅ Agregado" : "+ Carro"}
+      {added ? "¡Agregado!" : "+ Carro"}
     </button>
   );
 }
