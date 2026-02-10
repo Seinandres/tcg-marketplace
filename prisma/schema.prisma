@@ -11,7 +11,7 @@ datasource db {
 }
 
 // --------------------------------------
-// 1. USUARIOS & SUSCRIPCIONES
+// 1. USUARIOS & SISTEMA HERO RPG
 // --------------------------------------
 
 model User {
@@ -25,13 +25,21 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // --- CAMPOS SISTEMA HERO RPG ---
+  heroClass     String    @default("warrior")
+  heroColor     String    @default("#3b82f6")
+  heroWeapon    String    @default("sword")
+  heroLevel     Int       @default(1)
+  heroXP        Int       @default(0)
+  heroTitle     String?   @default("Iniciado")
+
   // Relaciones Marketplace
   listings      Listing[] 
   purchases     Order[]   @relation("BuyerOrders")
   sales         Order[]   @relation("SellerOrders")
   cart          CartItem[]
   
-  // Relación con Subastas (NUEVO)
+  // Relación con Subastas
   bids          Bid[]
 
   // Relación Suscripción
@@ -139,7 +147,7 @@ model Listing {
 }
 
 // --------------------------------------
-// 4. SISTEMA DE SUBASTAS (NUEVO)
+// 4. SISTEMA DE SUBASTAS
 // --------------------------------------
 
 model Bid {

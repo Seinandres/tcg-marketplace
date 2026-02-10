@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  shadow-db:
+    image: postgres:15
+    container_name: seina_shadow_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shadow_db
+    ports:
+      - "5433:5432" # Usamos el puerto 5433 para no chocar si ya tienes otro Postgres

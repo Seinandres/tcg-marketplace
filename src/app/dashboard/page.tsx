@@ -1,24 +1,27 @@
-// @ts-nocheck
 import { prisma } from "@/lib/prisma";
-import DashboardContent from "@/components/DashboardContent"; 
+import DashboardRPG from "@/components/DashboardRPG"; // Importamos el nuevo componente visual
 
 export const dynamic = 'force-dynamic';
 
 async function getUserDashboard() {
-  const userId = "user_placeholder_id";
+  // AQUÍ VA TU LÓGICA DE USUARIO REAL (Auth)
+  const userId = "user_placeholder_id"; 
 
+  // 1. Obtener Inventario (Listings)
   const listings = await prisma.listing.findMany({
     where: { userId },
     include: { card: { include: { set: true } } },
     orderBy: { createdAt: 'desc' }
   });
 
+  // 2. Obtener Ventas (Sales)
   const sales = await prisma.listing.findMany({
     where: { userId, status: 'SOLD' },
     include: { card: true },
     orderBy: { updatedAt: 'desc' }
   });
 
+  // 3. Calcular Totales
   const totalActiveValue = listings
     .filter(l => l.status === 'ACTIVE')
     .reduce((acc, item) => acc + item.price, 0);
@@ -30,5 +33,7 @@ async function getUserDashboard() {
 
 export default async function DashboardPage() {
   const data = await getUserDashboard();
-  return <DashboardContent {...data} />;
+  
+  // Pasamos los datos reales al componente RPG
+  return <DashboardRPG {...data} />;
 }
