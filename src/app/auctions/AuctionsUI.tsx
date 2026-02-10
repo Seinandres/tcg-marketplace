@@ -29,8 +29,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
 
   const xpPotential = Math.floor(featuredAuction.price / 500);
   const currentLevel = 12;
-  const nextLevelXp = 5000;
-
+  
   return (
     <div className="min-h-screen bg-[#020617] text-white pb-20 relative overflow-hidden font-sans">
       
@@ -42,7 +41,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* Container del Modal - OPTIMIZADO PARA 100% ZOOM */}
+          {/* Container del Modal */}
           <div className="relative bg-gradient-to-br from-[#0f172a] to-[#1e1b4b] border border-purple-500/20 rounded-3xl w-full max-w-[95vw] lg:max-w-6xl max-h-[92vh] shadow-[0_0_100px_rgba(168,85,247,0.4)] animate-in zoom-in-95 duration-500 overflow-hidden flex flex-col">
             
             {/* Efectos de fondo */}
@@ -51,7 +50,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
               <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             </div>
 
-            {/* Header del Modal - MÁS COMPACTO */}
+            {/* Header del Modal */}
             <div className="relative border-b border-white/10 bg-black/20 backdrop-blur-md flex-shrink-0">
               <div className="flex items-center justify-between p-4 lg:p-5">
                 <div className="flex items-center gap-3">
@@ -78,7 +77,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 </button>
               </div>
 
-              {/* Tab Navigation - MÁS COMPACTO */}
+              {/* Tab Navigation */}
               <div className="flex gap-1 px-4 lg:px-5 pb-3">
                 {[
                   { id: 'overview', icon: '🎴', label: 'Vista General' },
@@ -106,19 +105,20 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
             <div className="relative overflow-y-auto flex-1 custom-scrollbar">
               <div className="p-4 lg:p-6">
                 
-                {/* TAB: VISTA GENERAL - OPTIMIZADO */}
+                {/* TAB: VISTA GENERAL */}
                 {activeTab === 'overview' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     
-                    {/* IZQUIERDA: Imagen 3D de la Carta */}
-                    <div className="space-y-4">
+                    {/* IZQUIERDA: Imagen de la Carta */}
+                    <div className="lg:col-span-2 space-y-4">
                       <div className="relative group perspective-1000">
                         <div className="absolute -inset-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
                         
-                        <div className="relative bg-gradient-to-br from-[#050a14] to-purple-950/30 rounded-3xl p-6 lg:p-8 border border-purple-500/20 shadow-2xl overflow-hidden card-tilt">
+                        {/* CARTA */}
+                        <div className="relative bg-gradient-to-br from-[#050a14] to-purple-950/30 rounded-3xl p-4 lg:p-5 border border-purple-500/20 shadow-2xl overflow-hidden card-tilt">
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                           
-                          <div className="relative aspect-[2.5/3.5] w-full">
+                          <div className="relative aspect-[2.5/3.5] w-full max-w-[280px] mx-auto">
                             <Image 
                               src={featuredAuction.card.imageUrlLarge || featuredAuction.card.imageUrlSmall} 
                               alt={featuredAuction.card.name} 
@@ -128,7 +128,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             />
                           </div>
 
-                          {/* Badges flotantes */}
                           <div className="absolute top-3 left-3 right-3 flex justify-between">
                             <div className="bg-purple-500/30 backdrop-blur-xl border border-purple-500/50 rounded-xl px-2.5 py-1 text-[8px] font-black text-purple-200 uppercase tracking-wider shadow-xl">
                               PSA 10 • Gem Mint
@@ -139,7 +138,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             </div>
                           </div>
 
-                          {/* Rareza */}
                           <div className="absolute bottom-3 left-0 right-0 text-center">
                             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-xl border border-yellow-500/40 text-yellow-300 text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-2xl tracking-widest">
                               <span className="text-xs">✨</span>
@@ -149,12 +147,12 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                       </div>
 
-                      {/* Live Viewers - MÁS COMPACTO */}
+                      {/* Live Viewers */}
                       <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="flex -space-x-1.5">
                             {[1, 2, 3, 4].map((i) => (
-                              <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold">
+                              <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white">
                                 {String.fromCharCode(64 + i)}
                               </div>
                             ))}
@@ -174,9 +172,8 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                       </div>
                     </div>
 
-                    {/* DERECHA: Info y Acciones - MÁS COMPACTO */}
-                    <div className="space-y-4 lg:space-y-5">
-                      {/* Título y descripción */}
+                    {/* DERECHA: Info y Acciones */}
+                    <div className="lg:col-span-3 space-y-4 lg:space-y-5">
                       <div>
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
@@ -202,7 +199,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                       </div>
 
-                      {/* Precio Actual DESTACADO - MÁS COMPACTO */}
                       <div className="relative overflow-hidden bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-2 border-green-500/30 rounded-2xl p-4 lg:p-5 shadow-xl">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-3xl" />
                         <div className="relative">
@@ -228,7 +224,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                       </div>
 
-                      {/* Contador Regresivo - MÁS COMPACTO */}
                       <div className="bg-slate-900/60 border border-red-500/20 rounded-2xl p-4 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <p className="text-[8px] text-red-400 uppercase font-black tracking-widest flex items-center gap-1.5">
@@ -238,7 +233,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                         <AuctionCountdown endDate={auctionEndDate} />
                         
-                        {/* Barra de progreso temporal */}
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-[7px] text-slate-500 uppercase font-bold">
                             <span>Tiempo transcurrido</span>
@@ -252,7 +246,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                       </div>
 
-                      {/* Quick Actions - MÁS COMPACTO */}
                       <div className="space-y-2.5">
                         <p className="text-[8px] text-slate-400 uppercase font-black tracking-widest">⚡ Acciones Rápidas</p>
                         <div className="grid grid-cols-2 gap-2.5">
@@ -267,7 +260,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </div>
                       </div>
 
-                      {/* Comparativa de Mercado - MÁS COMPACTO */}
                       <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 space-y-2.5">
                         <p className="text-[8px] text-blue-400 uppercase font-black tracking-widest flex items-center gap-1.5">
                           <span>📈</span> Análisis de Mercado
@@ -344,11 +336,9 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                       </span>
                     </div>
 
-                    <div className="bg-slate-900/40 border border-white/10 rounded-2xl overflow-hidden">
+                    <div className="bg-slate-900/40 border border-white/10 rounded-2xl overflow-hidden min-h-[300px]">
                       <BidHistory 
-                        listingId={featuredAuction.id}
-                        currentPrice={featuredAuction.price}
-                        initialBids={featuredAuction.bids}
+                        initialBids={featuredAuction.bids} 
                       />
                     </div>
 
@@ -492,7 +482,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
               </div>
             </div>
 
-            {/* Footer del Modal - MÁS COMPACTO */}
+            {/* Footer del Modal */}
             <div className="relative border-t border-white/10 bg-black/20 backdrop-blur-md p-4 flex-shrink-0">
               <div className="flex flex-col md:flex-row gap-3">
                 <Link 
@@ -727,6 +717,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 <div className="sticky top-24 space-y-6 animate-in fade-in slide-in-from-right-8 duration-1000">
                     {featuredAuction ? (
                         <>
+                            {/* ===== CARTA DESTACADA ===== */}
                             <div className="relative group">
                                 <div className="absolute -inset-2 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-50 transition-all duration-1000 animate-pulse"></div>
                                 <div className="relative bg-gradient-to-b from-slate-900 to-slate-950 border border-white/10 rounded-[2.3rem] p-2 shadow-2xl overflow-hidden">
@@ -758,6 +749,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 </div>
                             </div>
 
+                            {/* ===== INFO PRINCIPAL ===== */}
                             <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 shadow-2xl space-y-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1">
@@ -791,6 +783,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 </div>
                             </div>
 
+                            {/* ===== QUICK BID & STATS ===== */}
                             <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 shadow-2xl">
                                 <QuickBidPanel 
                                     currentPrice={featuredAuction.price}

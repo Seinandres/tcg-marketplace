@@ -5,202 +5,193 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// --------------------------------------
-// 1. USUARIOS & SISTEMA HERO RPG
-// --------------------------------------
+// =========================================================
+// 🔐 MODELOS DE SEGURIDAD (NEXTAUTH) - AGREGADOS
+// =========================================================
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// =========================================================
+// 👤 USUARIO (FUSIONADO: AUTH + RPG)
+// =========================================================
 
 model User {
-  id            String    @id @default(uuid())
-  username      String?   @unique
-  email         String?   @unique 
-  walletAddress String?   @unique
-  rut           String?
-  image         String?
-  reputation    Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // --- CAMPOS SISTEMA HERO RPG ---
-  heroClass     String    @default("warrior")
-  heroColor     String    @default("#3b82f6")
-  heroWeapon    String    @default("sword")
-  heroLevel     Int       @default(1)
-  heroXP        Int       @default(0)
-  heroTitle     String?   @default("Iniciado")
-
-  // Relaciones Marketplace
-  listings      Listing[] 
-  purchases     Order[]   @relation("BuyerOrders")
-  sales         Order[]   @relation("SellerOrders")
-  cart          CartItem[]
+  id             String    @id @default(cuid())
+  name           String?   // Necesario para NextAuth
+  username       String?   @unique
+  email          String?   @unique
+  emailVerified  DateTime? // Necesario para NextAuth
+  hashedPassword String?   // Necesario para Login con contraseña
+  image          String?
   
-  // Relación con Subastas
-  bids          Bid[]
+  // Datos Personales
+  rut            String?
+  walletAddress  String?
+  
+  // Sistema RPG & Reputación
+  reputation     Int       @default(0)
+  heroClass      String    @default("warrior")
+  heroColor      String    @default("#3b82f6")
+  heroLevel      Int       @default(1)
+  heroTitle      String?   @default("Iniciado")
+  heroWeapon     String    @default("sword")
+  heroXP         Int       @default(0)
+  
+  // Rol (para diferenciar vendedores)
+  role           String    @default("USER") 
 
-  // Relación Suscripción
-  subscription  Subscription?
+  // Relaciones Auth
+  accounts       Account[]
+  sessions       Session[]
+  
+  // Relaciones App
+  bids           Bid[]
+  listings       Listing[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
-model Subscription {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id])
-  stripeCustomerId String   @unique
-  stripePriceId    String
-  status           String   
-  currentPeriodEnd DateTime
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+// =========================================================
+// 📦 MARKETPLACE & CARTAS (INTACTO)
+// =========================================================
+
+model Listing {
+  id        String   @id @default(cuid())
+  userId    String
+  cardId    String
+  price     Int
+  condition String
+  quantity  Int      @default(1)
+  status    String   @default("ACTIVE")
+  isNft     Boolean  @default(false)
+  type      String   @default("SALE") // AUCTION o SALE
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  bids      Bid[]
+  card      Card     @relation(fields: [cardId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-// --------------------------------------
-// 2. CATÁLOGO DE CARTAS (Mapeado para no borrar datos)
-// --------------------------------------
-
-model Set {
-  // Mapeamos a la tabla antigua 'CardSet' para no perder datos
-  @@map("CardSet") 
-
-  id           String    @id 
-  name         String
-  series       String?   
-  code         String?   
-  printedTotal Int?
+model Bid {
+  id        String   @id @default(cuid())
+  amount    Int
+  createdAt DateTime @default(now())
   
-  // Mapeamos 'total' a la columna vieja 'totalCards'
-  total        Int?      @map("totalCards")
+  userId    String
+  listingId String
   
-  releaseDate  String?
-  images       Json?     
-  updatedAt    DateTime  @updatedAt @default(now())
-  
-  cards        Card[]
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Card {
   id            String    @id @default(cuid())
-  
-  // --- CAMPOS NUEVOS ---
-  game          String    @default("Pokemon")
-  supertype     String?   
-  subtypes      String[]
-  types         String[]
-  hp            String?
-  artist        String?
-  
-  imageUrlSmall String
-  
-  // Mapeamos a columna vieja para no perder imágenes
-  imageUrlLarge String?   @map("imageUrlHiRes")
-  
-  // --- CAMPOS COMUNES ---
+  setId         String
   name          String
   number        String
   rarity        String?
-  
-  // --- CAMPOS LEGACY ---
+  imageUrlSmall String
+  imageUrlHiRes String?
   marketPrice   Float?
+  artist        String?
+  game          String    @default("Pokemon")
+  hp            String?
+  subtypes      String[]
+  supertype     String?
+  types         String[]
   
-  // --- RELACIONES ---
-  setId         String
-  set           Set       @relation(fields: [setId], references: [id])
-  
-  listings      Listing[]
-  priceHistory  PriceHistory[]
-
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt 
-}
-
-// --------------------------------------
-// 3. MARKETPLACE & LISTINGS (Ventas y Subastas)
-// --------------------------------------
-
-model Listing {
-  id        String   @id @default(cuid())
-  userId    String   
-  user      User     @relation(fields: [userId], references: [id])
-  cardId    String
-  card      Card     @relation(fields: [cardId], references: [id])
-
-  // Tipo de publicación: "SALE" (Venta) o "AUCTION" (Subasta)
-  type      String   @default("SALE") 
-
-  price     Int
-  condition String
-  quantity  Int      @default(1)
-  status    String   @default("ACTIVE") 
-  isNft     Boolean  @default(false)
-
-  // Relaciones
-  orders    Order[]
-  cartItems CartItem[]
-  bids      Bid[]    // Ofertas recibidas en subasta
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// --------------------------------------
-// 4. SISTEMA DE SUBASTAS
-// --------------------------------------
-
-model Bid {
-  id        String   @id @default(cuid())
-  amount    Int      // Monto de la oferta
-  createdAt DateTime @default(now())
-
-  userId    String   // Quién oferta
-  user      User     @relation(fields: [userId], references: [id])
-
-  listingId String   // En qué subasta
-  listing   Listing  @relation(fields: [listingId], references: [id])
-}
-
-// --------------------------------------
-// 5. TRANSACCIONES & CARRITO
-// --------------------------------------
-
-model Order {
-  id        String   @id @default(uuid())
-  buyerId   String
-  sellerId  String
-  listingId String
+  updatedAt     DateTime  @default(now()) @updatedAt
   
-  price     Int
-  status    String   @default("COMPLETED")
-  
-  createdAt DateTime @default(now())
+  set           CardSet   @relation(fields: [setId], references: [id])
+  listings      Listing[]
+}
 
-  buyer     User     @relation("BuyerOrders", fields: [buyerId], references: [id])
-  seller    User     @relation("SellerOrders", fields: [sellerId], references: [id])
-  listing   Listing  @relation(fields: [listingId], references: [id])
+model CardSet {
+  id           String   @id @default(cuid())
+  name         String
+  code         String?
+  releaseDate  String?
+  totalCards   Int?
+  images       Json?
+  printedTotal Int?
+  series       String?
+  
+  updatedAt    DateTime @default(now()) @updatedAt
+  cards        Card[]
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
+  id        String @id
   userId    String
   listingId String
-  quantity  Int      @default(1)
-
-  user      User     @relation(fields: [userId], references: [id])
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  quantity  Int    @default(1)
 }
 
-// --------------------------------------
-// 6. HISTORIAL DE PRECIOS
-// --------------------------------------
+model Order {
+  id        String   @id
+  buyerId   String
+  sellerId  String
+  listingId String
+  price     Int
+  status    String   @default("COMPLETED")
+  createdAt DateTime @default(now())
+}
 
 model PriceHistory {
-  id      String   @id @default(uuid())
-  cardId  String
-  date    DateTime @default(now())
-  price   Int
-  
-  card    Card     @relation(fields: [cardId], references: [id])
+  id     String   @id
+  cardId String
+  date   DateTime @default(now())
+  price  Int
+}
+
+model Subscription {
+  id               String   @id
+  userId           String   @unique
+  stripeCustomerId String   @unique
+  stripePriceId    String
+  status           String
+  currentPeriodEnd DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
 }

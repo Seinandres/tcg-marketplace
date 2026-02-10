@@ -1,16 +1,15 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// 1. Contexto del Carrito
-import { CartProvider } from "@/context/CartContext"; 
-// 2. RECUPERAMOS EL NAVBAR (Importante: intenta esto primero)
-import Navbar from "@/components/Navbar"; 
+import AuthContext from "@/context/AuthContext"; 
+import Navbar from "@/components/Navbar"; // <--- ESTO FALTABA
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TCG Marketplace Chile",
-  description: "Compra y vende cartas Pokémon en Chile",
+  title: "Seina Market | TCG Marketplace",
+  description: "El mejor mercado de cartas coleccionables de Chile",
 };
 
 export default function RootLayout({
@@ -20,18 +19,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${inter.className} bg-slate-950 text-white`}>
-        {/* Envolvemos todo en el CartProvider para que funcione la lógica de compra */}
-        <CartProvider>
-          
-          {/* 👇 AQUÍ ESTÁ EL MENÚ DE VUELTA 👇 */}
+      <body className={inter.className}>
+        <AuthContext>
+          {/* El Navbar va DENTRO del AuthContext para saber si estás logueado */}
           <Navbar /> 
-          
-          <main className="min-h-screen">
+          <main>
             {children}
           </main>
-          
-        </CartProvider>
+        </AuthContext>
       </body>
     </html>
   );

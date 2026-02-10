@@ -1,108 +1,69 @@
-// @ts-nocheck
+// src/components/BidHistory.tsx
 "use client";
 
-import { useState } from "react";
-import { placeBid } from "@/lib/actions";
+export default function BidHistory({ initialBids }) {
+  // Función auxiliar para calcular "hace cuánto tiempo" sin librerías externas
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
-// Recibimos 'listingId' y 'initialBids' como props reales
-export default function BidHistory({ listingId, currentPrice, initialBids = [] }: { listingId: string, currentPrice: number, initialBids?: any[] }) {
-  const [loading, setLoading] = useState(false);
-  const [amount, setAmount] = useState("");
-
-  // Calculamos la oferta mínima sugerida
-  const minBid = currentPrice + 1000;
-
-  const handleBid = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const formData = new FormData();
-    formData.append("listingId", listingId);
-    formData.append("amount", amount);
-
-    const res = await placeBid(formData);
-    
-    if (res?.success) {
-        setAmount(""); // Limpiar input
-        // La página se recargará automáticamente por el revalidatePath del server action
-    } else {
-        alert(res?.error || "Error al ofertar");
-    }
-    setLoading(false);
+    if (diffInSeconds < 60) return 'hace unos segundos';
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `hace ${diffInMinutes} min`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `hace ${diffInHours} h`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `hace ${diffInDays} días`;
   };
 
+  // Si no hay pujas, mostramos un mensaje de estado vacío
+  if (!initialBids || initialBids.length === 0) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-[10px] text-slate-500 italic">Sé el primero en desafiar...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden flex flex-col h-full max-h-[600px]">
-      {/* CABECERA */}
-      <div className="bg-slate-950 p-6 border-b border-slate-800">
-        <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-1">Oferta Actual</h3>
-        <div className="flex justify-between items-end">
-             <span className="text-4xl font-black italic text-white">${currentPrice.toLocaleString('es-CL')}</span>
-             <span className="text-[10px] font-bold text-green-500 bg-green-900/20 px-2 py-1 rounded animate-pulse">● En Vivo</span>
-        </div>
-      </div>
-
-      {/* LISTA DE PUJAS */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-        {initialBids.length > 0 ? (
-            initialBids.map((bid, index) => (
-            <div 
-                key={bid.id} 
-                className={`flex items-center justify-between p-3 rounded-xl border ${
-                    index === 0 
-                    ? "bg-purple-900/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.1)]" 
-                    : "bg-slate-950/50 border-slate-800"
-                }`}
-            >
-                <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black uppercase ${
-                        index === 0 ? "bg-purple-500 text-white" : "bg-slate-800 text-gray-500"
-                    }`}>
-                        {bid.user?.username?.substring(0, 2) || "NN"}
-                    </div>
-                    <div>
-                        <p className={`text-xs font-bold uppercase ${index === 0 ? "text-purple-300" : "text-gray-400"}`}>
-                            {bid.user?.username || "Anónimo"}
-                        </p>
-                        <p className="text-[9px] text-gray-600">Hace un momento</p>
-                    </div>
-                </div>
-                <p className={`text-sm font-black ${index === 0 ? "text-white" : "text-gray-500"}`}>
-                    ${bid.amount.toLocaleString('es-CL')}
-                </p>
+    <div className="max-h-[200px] overflow-y-auto custom-scrollbar p-2 space-y-2">
+      {initialBids.map((bid) => (
+        <div key={bid.id} className="flex items-center justify-between bg-black/20 p-2 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+          <div className="flex items-center gap-2">
+            {/* Avatar del Usuario */}
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-[8px] font-bold text-white uppercase border border-white/20 overflow-hidden">
+              {bid.user?.image ? (
+                <img src={bid.user.image} alt={bid.user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{bid.user?.name?.substring(0, 2) || "U"}</span>
+              )}
             </div>
-            ))
-        ) : (
-            <div className="text-center py-10 text-gray-600 text-xs italic">
-                Aún no hay ofertas. ¡Sé el primero!
+            
+            {/* Nombre y Tiempo */}
+            <div>
+              <p className="text-[9px] font-bold text-slate-200 leading-tight">
+                {bid.user?.name || "Entrenador Anónimo"}
+              </p>
+              <p className="text-[7px] text-slate-500">
+                {getTimeAgo(bid.createdAt)}
+              </p>
             </div>
-        )}
-      </div>
+          </div>
 
-      {/* FORMULARIO DE OFERTA */}
-      <form onSubmit={handleBid} className="p-4 bg-slate-950 border-t border-slate-800">
-        <div className="mb-3">
-            <label className="text-[9px] font-bold uppercase text-gray-500 mb-1 block">Tu Oferta (Mínimo ${minBid.toLocaleString('es-CL')})</label>
-            <input 
-                type="number" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min={minBid}
-                placeholder={`$${minBid}`}
-                required
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-white font-bold focus:border-purple-500 outline-none"
-            />
+          {/* Monto de la Puja */}
+          <div className="text-right">
+            <p className="text-[10px] font-mono font-bold text-green-400">
+              ${bid.amount.toLocaleString('es-CL')}
+            </p>
+            <div className="flex items-center justify-end gap-1">
+               <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
+               <span className="text-[6px] text-green-500/80 font-bold uppercase tracking-wider">Oferta</span>
+            </div>
+          </div>
         </div>
-        <button 
-            type="submit" 
-            disabled={loading}
-            className={`w-full font-black uppercase py-4 rounded-xl text-xs tracking-widest transition-all shadow-lg ${
-                loading ? "bg-gray-700 cursor-wait" : "bg-white text-black hover:bg-purple-500 hover:text-white"
-            }`}
-        >
-            {loading ? "Procesando..." : "Ofertar Ahora"}
-        </button>
-      </form>
+      ))}
     </div>
   );
 }
