@@ -1,403 +1,329 @@
-// @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
-/* -------------------------------------------------------------------------- */
-/* 🎨 MOTOR GRÁFICO SVG "PIXEL FORGE" (VERSIÓN DASHBOARD - NO BORRAR)         */
-/* -------------------------------------------------------------------------- */
+interface DashboardProps {
+  totalActiveValue: number;
+  totalSoldValue: number;
+  activeCount: number;
+  salesCount: number;
+  // Cambiamos recentSales por recentActivity para recibir TODO
+  recentActivity: any[]; 
+}
 
-const PixelHeroMini = ({ color = "#eab308" }) => {
-  const C = {
-    outline: "#020617", skin: "#ffedd5", gold: "#fbbf24",
-    steel: "#94a3b8", steelDark: "#1e293b",
-  };
-  return (
-    <svg viewBox="0 0 32 32" className="w-full h-full drop-shadow-lg" shapeRendering="crispEdges">
-       {/* Aura suave */}
-       <g className="animate-pulse" style={{ animationDuration: '3s' }}>
-          <circle cx="16" cy="15" r="14" fill={color} opacity={0.15} filter="blur(6px)" />
-       </g>
-       {/* Cuerpo Simplificado para Preview */}
-       <g>
-          <path d="M8 14 L5 28 L27 28 L24 14 Z" fill={color} />
-          <rect x="5" y="27" width="22" height="1" fill={C.gold} />
-          <rect x="12" y="24" width="3" height="6" fill={C.steelDark} />
-          <rect x="17" y="24" width="3" height="6" fill={C.steelDark} />
-          <rect x="11" y="14" width="10" height="10" fill={C.steel} />
-          <rect x="15" y="21" width="2" height="5" fill={color} stroke={C.gold} strokeWidth="0.5" />
-       </g>
-       <g transform="translate(0, -2)">
-          <rect x="12" y="8" width="8" height="7" fill={C.skin} />
-          <rect x="11" y="5" width="10" height="4" fill={C.gold} />
-          <rect x="12" y="6" width="8" height="2" fill="#fff" opacity="0.5" />
-       </g>
-       <g>
-          <rect x="5" y="8" width="4" height="18" fill={C.steel} />
-          <rect x="3" y="26" width="8" height="2" fill={C.gold} />
-       </g>
-    </svg>
-  );
-};
+// FRASES DE LA IA "CORTEX" (LORE)
+const AI_PHRASES = [
+  "Analizando fluctuaciones del mercado TCG...",
+  "Oportunidad detectada en el sector de subastas.",
+  "Sistemas de seguridad de bóveda: ACTIVOS.",
+  "Recuerda: El valor es subjetivo, la victoria es absoluta.",
+  "Escaneando red en busca de compradores potenciales...",
+  "Tu reputación precede a tus ventas, Operador.",
+  "Los precios de Charizard están inestables hoy.",
+  "Sincronizando con la Blockchain de Seina...",
+  "Se detecta un aumento en la demanda de cartas selladas."
+];
 
-/* -------------------------------------------------------------------------- */
-/* 📦 COMPONENTE: GESTIÓN DE BODEGA (INVENTARIO)                              */
-/* -------------------------------------------------------------------------- */
-
-const InventoryTable = ({ listings }) => {
-    const [searchTerm, setSearchTerm] = useState("");
-
-    // Simulación de filtro (en producción usarías la DB)
-    const filteredListings = listings.filter(l => 
-        l.card?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return (
-        <div className="bg-slate-900/60 border border-white/10 rounded-2xl overflow-hidden animate-[fadeIn_0.3s_ease-out] shadow-2xl">
-            {/* Header de la Tabla con Herramientas */}
-            <div className="p-5 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 bg-black/20">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 text-blue-400 flex items-center justify-center w-10 h-10">
-                        <span className="text-xl">📦</span>
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Bóveda de Cartas</h3>
-                        <p className="text-[10px] text-slate-400">Gestionando {listings.length} ítems</p>
-                    </div>
-                </div>
-                
-                <div className="flex gap-2 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">🔍</span>
-                        <input 
-                            type="text" 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por nombre..." 
-                            className="w-full bg-black/50 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-600"
-                        />
-                    </div>
-                    <button className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-white/5 rounded-xl text-slate-300 transition-colors flex items-center justify-center">
-                        <span className="text-xs">🌪️</span>
-                    </button>
-                </div>
-            </div>
-            
-            {/* Tabla */}
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-950/50 text-slate-500 uppercase font-black tracking-wider border-b border-white/5">
-                        <tr>
-                            <th className="px-5 py-4">Carta</th>
-                            <th className="px-5 py-4">Set / Edición</th>
-                            <th className="px-5 py-4">Estado</th>
-                            <th className="px-5 py-4 text-right">Precio</th>
-                            <th className="px-5 py-4 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                        {filteredListings.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
-                                    <div className="flex flex-col items-center gap-2 opacity-50">
-                                        <span className="text-3xl">📭</span>
-                                        <p className="italic">No se encontraron cartas en la bóveda.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredListings.map((item) => (
-                                <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                                    <td className="px-5 py-4 font-bold text-white">
-                                        <div className="flex items-center gap-3">
-                                            {/* Placeholder visual de carta */}
-                                            <div className="w-8 h-10 bg-slate-800 rounded border border-slate-600 flex-shrink-0 flex items-center justify-center text-[10px] shadow-sm group-hover:scale-110 transition-transform">
-                                                🃏
-                                            </div>
-                                            <span className="group-hover:text-blue-400 transition-colors cursor-pointer">
-                                                {item.card?.name || "Carta Desconocida"}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-5 py-4 text-slate-400 font-mono text-[10px]">
-                                        {item.card?.set?.name || "Set Base"}
-                                    </td>
-                                    <td className="px-5 py-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wide ${
-                                            item.status === 'ACTIVE' 
-                                            ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                                            : 'bg-slate-700 text-slate-400'
-                                        }`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-                                            {item.status === 'ACTIVE' ? 'En Venta' : 'Vendido'}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-4 text-right">
-                                        <span className="font-mono text-yellow-400 font-bold text-sm">
-                                            ${item.price.toLocaleString()}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-4 text-center">
-                                        <div className="flex justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-1.5 hover:bg-blue-500/20 hover:text-blue-400 rounded-lg transition-colors" title="Editar">
-                                                ✏️
-                                            </button>
-                                            <button className="p-1.5 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors" title="Eliminar">
-                                                🗑️
-                                            </button>
-                                            <button className="p-1.5 hover:bg-white/10 hover:text-white rounded-lg transition-colors">
-                                                ⋯
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-            
-            {/* Footer de Paginación */}
-            <div className="p-4 border-t border-white/5 bg-black/20 flex justify-between items-center">
-                <span className="text-[10px] text-slate-500">Mostrando {filteredListings.length} resultados</span>
-                <div className="flex gap-2">
-                    <button className="px-3 py-1 bg-slate-800 rounded text-[10px] text-slate-400 hover:text-white disabled:opacity-50" disabled>Anterior</button>
-                    <button className="px-3 py-1 bg-slate-800 rounded text-[10px] text-slate-400 hover:text-white">Siguiente</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-/* -------------------------------------------------------------------------- */
-/* 🧩 COMPONENTES UI DASHBOARD                                                */
-/* -------------------------------------------------------------------------- */
-
-const ProgressBar = ({ current, max, color, label, icon }) => {
-  const percentage = Math.min(100, Math.max(0, (current / max) * 100));
-  return (
-    <div className="w-full space-y-1.5">
-      <div className="flex justify-between text-[9px] font-black uppercase tracking-wider text-slate-400">
-        <span className="flex items-center gap-1.5"><span className="opacity-70">{icon}</span> {label}</span>
-        <span className="font-mono">{current}/{max}</span>
-      </div>
-      <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5 shadow-inner">
-        <div 
-          className="h-full transition-all duration-1000 ease-out relative"
-          style={{ width: `${percentage}%`, backgroundColor: color, boxShadow: `0 0 10px ${color}80` }}
-        >
-            <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const QuestItem = ({ type, title, rewardXP, rewardGold, progress, target, isCompleted }) => (
-  <div className={`group relative p-3.5 rounded-xl border transition-all duration-300 ${isCompleted ? 'bg-green-900/10 border-green-500/30' : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}>
-    <div className="flex justify-between items-start mb-2.5">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-1.5 h-1.5 rounded-full ${type === 'Daily' ? 'bg-blue-400' : 'bg-purple-400'} shadow-[0_0_8px_currentColor]`} />
-        <span className={`text-[10px] font-bold ${isCompleted ? 'text-green-300 line-through opacity-70' : 'text-slate-200'}`}>{title}</span>
-      </div>
-      <div className="flex gap-1">
-        <span className="text-[8px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-1.5 py-0.5 rounded font-mono font-bold">+{rewardGold}G</span>
-        <span className="text-[8px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-mono font-bold">+{rewardXP}XP</span>
-      </div>
-    </div>
-    
-    <div className="relative h-1 w-full bg-slate-950 rounded-full overflow-hidden">
-        <div 
-            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-slate-600 group-hover:bg-slate-500'}`} 
-            style={{ width: `${(progress/target)*100}%` }} 
-        />
-    </div>
-    
-    {isCompleted && (
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-             <span className="text-green-500 text-xs animate-bounce">✅</span>
-        </div>
-    )}
-  </div>
-);
-
-const MarketAlert = ({ type, text, trend }) => (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5 hover:border-white/10 transition-colors cursor-pointer group">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg shadow-inner ${type === 'hot' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
-            {type === 'hot' ? '🔥' : '📈'}
-        </div>
-        <div className="flex-1">
-            <p className="text-[10px] font-bold text-slate-300 leading-tight group-hover:text-white transition-colors">{text}</p>
-            <p className={`text-[9px] font-mono font-bold mt-1 flex items-center gap-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {trend > 0 ? '▲' : '▼'} {Math.abs(trend)}% <span className="text-slate-500 font-sans font-normal">Demanda</span>
-            </p>
-        </div>
-    </div>
-);
-
-/* -------------------------------------------------------------------------- */
-/* 🏰 DASHBOARD RPG (COMPONENTE PRINCIPAL)                                    */
-/* -------------------------------------------------------------------------- */
-
-export default function DashboardRPG({ listings = [], sales = [], totalActiveValue = 0, totalSoldValue = 0 }) {
-  const [activeTab, setActiveTab] = useState('daily');
-  const [view, setView] = useState('hq'); // 'hq' (Centro de Mando) | 'inventory' (Bodega)
+export default function DashboardRPG({ 
+  totalActiveValue = 0, 
+  totalSoldValue = 0, 
+  activeCount = 0, 
+  salesCount = 0,
+  recentActivity = [] 
+}: DashboardProps) {
   
-  // Calcular nivel basado en ventas (Gamification real con tus datos)
-  const xp = Math.min(3500, Math.floor(totalSoldValue / 10)); 
-  const level = Math.floor(xp / 500) + 1;
-  const nextLevelXp = level * 500;
+  const { data: session, status } = useSession();
+  
+  // Estados RPG
+  const [xp, setXp] = useState(250);
+  const [maxXp, setMaxXp] = useState(1000);
+  const [dailyClaimed, setDailyClaimed] = useState(false);
+  const [lootBoxState, setLootBoxState] = useState<'idle' | 'shaking' | 'opening' | 'opened'>('idle');
+  const [mounted, setMounted] = useState(false);
+
+  // Estados de la IA (CORTEX)
+  const [aiText, setAiText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Efecto de montaje y Loop de la IA
+  useEffect(() => {
+    setMounted(true);
+    const aiInterval = setInterval(() => { changeAiThought(); }, 8000);
+    changeAiThought();
+    return () => clearInterval(aiInterval);
+  }, []);
+
+  const changeAiThought = () => {
+    setIsTyping(true);
+    const phrase = AI_PHRASES[Math.floor(Math.random() * AI_PHRASES.length)];
+    let i = 0;
+    setAiText("");
+    const typing = setInterval(() => {
+      setAiText((prev) => prev + phrase.charAt(i));
+      i++;
+      if (i > phrase.length - 1) {
+        clearInterval(typing);
+        setIsTyping(false);
+      }
+    }, 30);
+  };
+
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
+  };
+
+  // MECÁNICA DE LOOT BOX (Regresamos a la CAJA TÁCTICA 📦)
+  const openLootBox = () => {
+    if (dailyClaimed || lootBoxState !== 'idle') return;
+    setLootBoxState('shaking');
+    
+    setTimeout(() => {
+      setLootBoxState('opened');
+      setDailyClaimed(true);
+      setXp(prev => prev + 150);
+
+      const duration = 3000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#00ffff', '#ff00ff', '#ffff00'] });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#00ffff', '#ff00ff', '#ffff00'] });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      }());
+    }, 1000);
+  };
+
+  if (!mounted || status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col items-center gap-4 relative z-10">
+          <div className="w-24 h-24 border-t-4 border-cyan-500 rounded-full animate-spin"></div>
+          <p className="text-cyan-400 font-mono text-xs animate-pulse tracking-[0.3em]">CORTEX SYSTEM: BOOTING...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-blue-500/30 pb-20 overflow-hidden">
+    <div className="min-h-screen bg-[#020617] text-white font-sans overflow-x-hidden selection:bg-cyan-500/30 relative">
       
-      {/* BACKGROUND FX (Grid sutil) */}
+      {/* CAPA 1: CRT OVERLAY */}
+      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+      <div className="fixed inset-0 pointer-events-none z-50 bg-[radial-gradient(circle,transparent_60%,#000_100%)] opacity-40"></div>
+
+      {/* CAPA 2: FONDO VIVO */}
       <div className="fixed inset-0 pointer-events-none z-0">
-         <div className="absolute inset-0 opacity-[0.03]" 
-            style={{ 
-                backgroundImage: 'linear-gradient(#4f46e5 1px, transparent 1px), linear-gradient(90deg, #4f46e5 1px, transparent 1px)', 
-                backgroundSize: '40px 40px' 
-            }} 
-         />
-         <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-blue-900/10 to-transparent" />
+         <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_80%)]"></div>
+         <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-cyan-500/5 rounded-full blur-[150px] animate-pulse"></div>
+         <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-purple-600/5 rounded-full blur-[150px] animate-pulse delay-700"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-8">
         
-        {/* HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-center mb-10 pb-6 border-b border-white/5 gap-6">
-            <div className="flex items-center gap-5">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.3)] text-3xl border border-white/20">
-                    🏰
+        {/* === HEADER TÁCTICO === */}
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-6 mb-8">
+          
+          {/* PERFIL & NIVEL */}
+          <div className="flex items-center gap-6 bg-slate-900/40 backdrop-blur-md p-4 pr-8 rounded-r-full border-l-4 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.1)] w-full xl:w-auto animate-in slide-in-from-left duration-700">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full border-2 border-white/10 p-1">
+                <div className="w-full h-full rounded-full bg-black overflow-hidden relative">
+                   {session?.user?.image ? (
+                     <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+                   ) : (
+                     <div className="w-full h-full flex items-center justify-center bg-slate-800 text-2xl">👾</div>
+                   )}
+                   <div className="absolute inset-0 bg-cyan-500/20 animate-[scan-vertical_2s_linear_infinite]"></div>
                 </div>
-                <div>
-                    <h1 className="text-3xl font-black italic tracking-tighter text-white drop-shadow-sm">CENTRO DE MANDO</h1>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
-                        ESTADO: <span className="text-green-400 animate-pulse">ONLINE</span>
-                    </p>
-                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-black border border-cyan-500 text-[9px] font-black text-cyan-400 px-2 rounded-full">LVL 1</div>
             </div>
-
-            <div className="flex gap-4">
-                <div className="bg-slate-900/80 border border-white/10 px-5 py-3 rounded-2xl flex flex-col items-end min-w-[140px] shadow-lg">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-1">Tesorería (Ventas)</span>
-                    <span className="text-xl font-mono font-bold text-yellow-400 drop-shadow-sm">${totalSoldValue.toLocaleString()}</span>
-                </div>
-                <div className="bg-slate-900/80 border border-white/10 px-5 py-3 rounded-2xl flex flex-col items-end min-w-[140px] shadow-lg">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-1">Valor en Bodega</span>
-                    <span className="text-xl font-mono font-bold text-blue-400 drop-shadow-sm">${totalActiveValue.toLocaleString()}</span>
-                </div>
+            
+            <div>
+              <div className="flex items-baseline gap-2">
+                <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white glitch-text" data-text={session?.user?.name}>
+                  {session?.user?.name || "OPERADOR"}
+                </h1>
+                <span className="text-[9px] text-slate-500 font-mono">ID: {Math.floor(Math.random()*9999)}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                 <div className="w-32 h-2 bg-slate-800 rounded-sm overflow-hidden relative">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-30"></div>
+                    <div className="h-full bg-gradient-to-r from-cyan-600 to-blue-500 shadow-[0_0_10px_cyan]" style={{ width: `${(xp/maxXp)*100}%` }}></div>
+                 </div>
+                 <span className="text-[9px] text-cyan-500 font-mono">{xp} XP</span>
+              </div>
             </div>
-        </header>
+          </div>
 
-        {/* NAVEGACIÓN (TABS) */}
-        <div className="flex gap-4 mb-8">
-            <button 
-                onClick={() => setView('hq')}
-                className={`px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2 ${view === 'hq' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`}
-            >
-                🗺️ Mapa General
-            </button>
-            <button 
-                onClick={() => setView('inventory')}
-                className={`px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2 ${view === 'inventory' ? 'bg-slate-700 text-white shadow-lg scale-105 border border-white/20' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`}
-            >
-                📦 Gestión de Bodega
-            </button>
+          {/* === CORTEX AI MODULE === */}
+          <div className="flex-1 w-full max-w-2xl bg-black/40 border border-white/5 rounded-lg p-3 flex items-center gap-4 relative overflow-hidden group">
+             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-purple-500 to-transparent opacity-50"></div>
+             <div className="w-10 h-10 rounded bg-purple-900/20 border border-purple-500/50 flex items-center justify-center shrink-0 relative">
+               <div className="absolute inset-0 bg-purple-500/20 animate-ping rounded"></div>
+               <span className="text-xl relative z-10">🧠</span>
+             </div>
+             <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
+               <div className="flex justify-between items-center mb-1">
+                 <span className="text-[8px] font-black text-purple-400 tracking-[0.2em] uppercase">CORTEX_AI // SYSTEM_LOG</span>
+                 <span className="text-[8px] text-slate-600 font-mono animate-pulse">{isTyping ? 'RECEIVING DATA...' : 'STANDBY'}</span>
+               </div>
+               <p className="text-xs md:text-sm text-purple-100 font-mono truncate leading-none pb-1">
+                 {">"} {aiText}<span className="animate-blink">_</span>
+               </p>
+             </div>
+          </div>
+
+          {/* Botón Acción */}
+          <Link href="/sell" className="group relative px-6 py-3 bg-white text-black font-black uppercase tracking-widest text-xs rounded hover:bg-cyan-400 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] skew-x-[-10deg] hover:skew-x-0 w-full md:w-auto text-center">
+             <span className="block skew-x-[10deg] group-hover:skew-x-0 transition-transform">Desplegar Venta</span>
+          </Link>
         </div>
 
-        {/* === VISTA: CENTRO DE MANDO (HQ) === */}
-        {view === 'hq' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-[fadeIn_0.5s_ease-out]">
-                
-                {/* 1. COLUMNA IZQUIERDA: TU AVATAR */}
-                <div className="lg:col-span-3 space-y-6">
-                    <div className="bg-slate-900/60 border border-white/10 rounded-[2rem] p-6 relative overflow-hidden group shadow-2xl">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50" />
-                        
-                        <div className="text-center mb-6 relative">
-                            <div className="inline-block px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-4">
-                                Comerciante Épico
-                            </div>
-                            {/* MINI HÉROE */}
-                            <div className="w-32 h-32 mx-auto relative filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-110">
-                                <PixelHeroMini color="#eab308" />
-                            </div>
-                        </div>
+        {/* === GRID BENTO PRINCIPAL === */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                        <div className="space-y-5">
-                            <div className="flex justify-between items-end">
-                                <span className="text-2xl font-black text-white italic tracking-tight">NIVEL {level}</span>
-                                <span className="text-[10px] text-slate-400 font-mono font-bold">{xp} / {nextLevelXp} XP</span>
-                            </div>
-                            <ProgressBar current={xp} max={nextLevelXp} color="#3b82f6" label="Progreso" icon="✨" />
-                            <ProgressBar current={85} max={100} color="#22c55e" label="Energía" icon="⚡" />
-                        </div>
-                        
-                        {/* BOTÓN MÁGICO: ENLACE A LA PÁGINA DE EDICIÓN */}
-                        <Link href="/dashboard/hero" className="mt-8 block group/btn">
-                            <div className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-xl flex items-center justify-center gap-2 transition-all">
-                                <span className="text-[10px] font-black text-slate-300 group-hover/btn:text-white uppercase tracking-widest">⚙️ Personalizar Avatar</span>
-                            </div>
-                        </Link>
-                    </div>
+          {/* 1. BÓVEDA FINANCIERA */}
+          <div className="lg:col-span-8 bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-cyan-500/50 transition-all">
+             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-5"></div>
+             <div className="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                   <div className="flex items-center gap-2 mb-2 opacity-70">
+                     <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_cyan]"></span>
+                     <h3 className="text-[10px] font-bold text-cyan-300 uppercase tracking-[0.2em]">Valoración en Tiempo Real</h3>
+                   </div>
+                   <div className="flex items-baseline gap-4">
+                     <h2 className="text-6xl font-black text-white tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                       {formatMoney(totalActiveValue)}
+                     </h2>
+                     <span className="text-green-400 text-xs font-bold bg-green-900/30 px-2 py-1 rounded border border-green-500/30">▲ 2.4%</span>
+                   </div>
                 </div>
 
-                {/* 2. COLUMNA CENTRAL: MISIONES */}
-                <div className="lg:col-span-6 space-y-6">
-                    <div className="bg-slate-900/60 border border-white/10 rounded-[2rem] p-6 min-h-[400px] shadow-2xl relative overflow-hidden">
-                        {/* Decoration */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-
-                        <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-xl font-black italic text-white flex items-center gap-2">
-                                <span className="text-2xl">📜</span> MISIONES ACTIVAS
-                            </h2>
-                            <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
-                                <button onClick={() => setActiveTab('daily')} className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeTab === 'daily' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Diarias</button>
-                                <button onClick={() => setActiveTab('weekly')} className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeTab === 'weekly' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Semanales</button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 relative z-10">
-                            {/* Ejemplo de Quest completada y pendientes */}
-                            <QuestItem type="Daily" title="Publica 3 cartas nuevas" rewardXP={50} rewardGold={100} progress={listings.length % 3} target={3} isCompleted={listings.length >= 3} />
-                            <QuestItem type="Daily" title="Ventas Totales" rewardXP={100} rewardGold={50} progress={totalSoldValue} target={50000} isCompleted={totalSoldValue >= 50000} />
-                            {/* Quest falsa para rellenar */}
-                            <QuestItem type="Daily" title="Comparte tu perfil" rewardXP={20} rewardGold={5} progress={0} target={1} isCompleted={false} />
-                        </div>
-                    </div>
+                <div className="mt-8 flex items-end gap-1 h-32 w-full mask-image-gradient-b">
+                   {Array.from({ length: 20 }).map((_, i) => (
+                     <div key={i} className="flex-1 relative group/bar h-full flex items-end">
+                       <div 
+                         className="w-full bg-cyan-500/20 border-t border-cyan-400 rounded-sm transition-all duration-[2000ms] ease-in-out hover:bg-cyan-400/80 shadow-[0_0_15px_rgba(6,182,212,0.2)]" 
+                         style={{ height: `${Math.floor(Math.random() * (90 - 20 + 1) + 20)}%` }}
+                       ></div>
+                     </div>
+                   ))}
                 </div>
 
-                {/* 3. COLUMNA DERECHA: OPORTUNIDADES */}
-                <div className="lg:col-span-3 space-y-6">
-                    <div className="bg-slate-900/60 border border-white/10 rounded-[2rem] p-6 shadow-2xl">
-                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-5 flex items-center gap-2">
-                            <span className="text-lg">🎯</span> Oportunidades
-                        </h3>
-                        <div className="space-y-3">
-                            <MarketAlert type="hot" text="Alta demanda: One Piece" trend={25} />
-                            <MarketAlert type="opportunity" text="Escasez: Charizard VMAX" trend={12} />
-                        </div>
-                    </div>
+                <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
+                   <div className="flex gap-4 text-slate-400">
+                     <span><b className="text-white">{activeCount}</b> ACTIVOS</span>
+                     <span><b className="text-white">{salesCount}</b> TRANSACCIONES</span>
+                   </div>
+                   <Link href="/inventory" className="text-cyan-400 font-bold hover:text-white transition-colors uppercase tracking-wider text-[10px]">
+                     Entrar a Bóveda &rarr;
+                   </Link>
                 </div>
+             </div>
+          </div>
+
+          {/* 2. LOOT BOX "HOLOGRÁFICA" (El regreso de la CAJA DE CARTÓN TÁCTICA) */}
+          <div className="lg:col-span-4 bg-gradient-to-b from-slate-900 to-purple-900/20 border border-white/10 rounded-3xl p-1 relative overflow-hidden flex flex-col shadow-2xl group">
+            {!dailyClaimed && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent w-[200%] h-[200%] animate-[spin_4s_linear_infinite] opacity-50"></div>}
+            
+            <div className="relative w-full h-full bg-slate-950/90 rounded-[22px] p-6 flex flex-col items-center justify-center z-10">
+               <div className="w-full flex justify-between items-center mb-8 border-b border-white/5 pb-2">
+                 <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">SUMINISTRO DIARIO</span>
+                 <span className="text-[9px] text-slate-600 font-mono">{dailyClaimed ? 'OFFLINE' : 'READY'}</span>
+               </div>
+               
+               <div 
+                 onClick={openLootBox}
+                 className={`cursor-pointer transition-all duration-300 transform
+                   ${lootBoxState === 'idle' ? 'hover:scale-105' : ''}
+                   ${lootBoxState === 'shaking' ? 'animate-[shake_0.5s_ease-in-out_infinite]' : ''}
+                   ${lootBoxState === 'opened' ? 'opacity-50 grayscale scale-95' : ''}
+                 `}
+               >
+                 {/* AQUI ESTÁ EL CAMBIO: Volvimos a la Caja de Cartón 📦 */}
+                 <div className="relative text-8xl filter drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+                   {lootBoxState === 'opened' ? '🔓' : '📦'}
+                   
+                   {lootBoxState === 'idle' && (
+                     <>
+                      <div className="absolute -top-4 -right-4 w-2 h-2 bg-purple-400 rounded-full animate-ping"></div>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-purple-500/20 rounded-full blur-xl animate-pulse -z-10"></div>
+                     </>
+                   )}
+                 </div>
+               </div>
+
+               <div className="mt-8">
+                 {!dailyClaimed ? (
+                   <button onClick={openLootBox} className="px-8 py-3 bg-purple-600/10 border border-purple-500 text-purple-400 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-purple-600 hover:text-white transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                     {lootBoxState === 'shaking' ? 'DECODIFICANDO...' : 'INICIAR APERTURA'}
+                   </button>
+                 ) : (
+                   <div className="text-center animate-in zoom-in">
+                      <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">+150 XP</p>
+                      <p className="text-[10px] text-slate-500 mt-1 uppercase">Sincronización Completa</p>
+                   </div>
+                 )}
+               </div>
             </div>
-        )}
+          </div>
 
-        {/* === VISTA: BODEGA (INVENTARIO) === */}
-        {view === 'inventory' && (
-            <div className="animate-[fadeIn_0.3s_ease-out]">
-                <InventoryTable listings={listings} />
-            </div>
-        )}
+          {/* 3. RADAR DE ACTIVIDAD (ARREGLADO PARA VER TUS VENTAS) */}
+          <div className="lg:col-span-12 bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-lg">
+             <div className="p-3 border-b border-white/5 flex justify-between items-center bg-black/40 px-6">
+                <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]"></div>
+                   <h3 className="text-[10px] font-black uppercase text-slate-300 tracking-[0.2em]">Radar de Actividad Local</h3>
+                </div>
+                <div className="flex items-center gap-4 text-[9px] font-mono text-slate-500">
+                   <span>SECTOR: 7G</span>
+                   <span>LATENCIA: 12ms</span>
+                </div>
+             </div>
 
+             <div className="relative p-4 min-h-[120px]">
+               {recentActivity.length > 0 ? (
+                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                   {recentActivity.map((item, idx) => (
+                     <div key={idx} className={`min-w-[200px] bg-slate-800/50 border border-white/5 p-3 rounded-lg flex flex-col gap-1 transition-colors group ${item.type === 'SOLD' ? 'hover:border-green-500/50' : 'hover:border-cyan-500/50'}`}>
+                        <div className="flex justify-between items-start">
+                          <span className="text-xs font-bold text-white truncate max-w-[120px]">{item.card?.name || "Objeto Clasificado"}</span>
+                          {/* ETIQUETA DINÁMICA: SOLD o BÓVEDA */}
+                          <span className={`text-[8px] px-1 rounded border ${item.type === 'SOLD' ? 'text-green-400 bg-green-900/20 border-green-500/20' : 'text-cyan-400 bg-cyan-900/20 border-cyan-500/20'}`}>
+                              {item.type === 'SOLD' ? 'SOLD' : 'BÓVEDA'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                        <span className={`text-sm font-black text-white mt-1 ${item.type === 'SOLD' ? 'group-hover:text-green-400' : 'group-hover:text-cyan-400'}`}>
+                            {formatMoney(item.price)}
+                        </span>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 // RADAR VACÍO ANIMADO
+                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-full max-w-lg h-[1px] bg-gradient-to-r from-transparent via-green-500/50 to-transparent animate-[scan-horizontal_3s_linear_infinite]"></div>
+                    <p className="absolute text-[10px] text-green-500/50 font-mono tracking-widest bg-black px-2">BUSCANDO SEÑAL...</p>
+                 </div>
+               )}
+             </div>
+          </div>
+
+        </div>
       </div>
-      
-      {/* Global CSS for Animations */}
+
+      {/* ESTILOS GLOBALES */}
       <style jsx global>{`
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scan-vertical { 0% { top: -100%; opacity: 0; } 50% { opacity: 1; } 100% { top: 200%; opacity: 0; } }
+        @keyframes scan-horizontal { 0% { width: 0%; opacity: 0; } 50% { width: 100%; opacity: 1; } 100% { width: 0%; opacity: 0; margin-left: 100%; } }
+        @keyframes breathing-bar { 0% { height: 20%; } 100% { height: 100%; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .animate-blink { animation: blink 1s step-end infinite; }
+        .glitch-text:hover { animation: shake 0.5s infinite; color: #00ffff; text-shadow: 2px 2px #ff00ff; }
       `}</style>
     </div>
   );

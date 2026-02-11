@@ -1,44 +1,64 @@
 // src/app/register/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import confetti from "canvas-confetti"; // Importamos la magia
+import confetti from "canvas-confetti";
 
 export default function RegisterPage() {
   const [data, setData] = useState({ name: '', email: '', password: '' });
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Estados para la animación de "Reveal"
+  const [isFlipped, setIsFlipped] = useState(false); // La carta empieza boca abajo
+  const [showContent, setShowContent] = useState(false); // Retraso para textos
 
-  // Efecto de Confeti al completar el registro
+  // --- LÓGICA TILT 3D ---
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [rotate, setRotate] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const card = cardRef.current;
+    const box = card.getBoundingClientRect();
+    const x = e.clientX - box.left;
+    const y = e.clientY - box.top;
+    const centerX = box.width / 2;
+    const centerY = box.height / 2;
+    const rotateX = (y - centerY) / 10;
+    const rotateY = (centerX - x) / 10;
+
+    setRotate({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setRotate({ x: 0, y: 0 });
+  };
+  // ----------------------
+
+  // SECUENCIA CINEMÁTICA DE ÉXITO
   useEffect(() => {
     if (showSuccess) {
-      const duration = 3000;
-      const end = Date.now() + duration;
-
-      const frame = () => {
+      // 1. Esperamos 600ms con la carta boca abajo (Suspenso)
+      setTimeout(() => {
+        setIsFlipped(true); // ¡GIRA LA CARTA!
+        
+        // 2. Disparamos confeti justo cuando la carta se revela
         confetti({
-          particleCount: 2,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: ['#a855f7', '#22c55e', '#ffffff'] // Colores morado, verde y blanco
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#a855f7', '#22c55e', '#ffffff', '#fbbf24']
         });
-        confetti({
-          particleCount: 2,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: ['#a855f7', '#22c55e', '#ffffff']
-        });
+      }, 600);
 
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-      frame();
+      // 3. Mostramos los botones y textos laterales un poco después
+      setTimeout(() => {
+        setShowContent(true);
+      }, 1000);
     }
   }, [showSuccess]);
 
@@ -63,7 +83,7 @@ export default function RegisterPage() {
         setLoading(false);
       }
     } catch (error) {
-      alert("Error de conexión. Revisa tu consola.");
+      alert("Error de conexión.");
       setLoading(false);
     }
   }
@@ -75,87 +95,150 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center relative overflow-hidden font-sans">
       
-      {/* ==================== MODAL "STARTER PACK" ==================== */}
+      {/* ==================== MODAL DE EXPERIENCIA "PACK OPENING" ==================== */}
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-500">
-          <div className="relative w-full max-w-4xl text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-300">
+          
+          {/* Fondo Cibernético Animado */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+             <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(168,85,247,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.1)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]"></div>
+          </div>
+
+          <div className="relative w-full max-w-5xl text-center z-10">
             
-            {/* Título de Victoria */}
-            <div className="mb-10 animate-in slide-in-from-top-10 duration-700">
-              <h2 className="text-5xl md:text-7xl font-black italic uppercase text-white tracking-tighter drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]">
-                GUERRERO <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">RECLUTADO</span>
+            {/* Título que aparece suavemente */}
+            <div className={`mb-12 transition-all duration-1000 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
+              <h2 className="text-5xl md:text-7xl font-black italic uppercase text-white tracking-tighter drop-shadow-[0_0_35px_rgba(168,85,247,0.6)]">
+                GUERRERO <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 animate-pulse">DESPERTADO</span>
               </h2>
-              <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.5em] mt-4 animate-pulse">
-                Identidad Forjada • Acceso Concedido
-              </p>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-24 perspective-2000">
               
-              {/* === LA NUEVA "ID CARD" DEL JUGADOR === */}
-              <div className="relative group w-full max-w-xs perspective-1000 animate-in zoom-in duration-700 delay-150">
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-slate-900 border border-white/10 rounded-xl p-6 flex flex-col items-center shadow-2xl">
-                  {/* Avatar Placeholder */}
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 p-1 mb-4 shadow-lg shadow-purple-500/30">
-                    <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-3xl">
-                      👾
+              {/* === LA CARTA FLIPPEABLE === */}
+              <div 
+                className="relative w-72 h-96 cursor-pointer group perspective-1000"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                {/* Contenedor que hace el giro real */}
+                <div 
+                  className="w-full h-full relative transition-all duration-1000 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transform: isFlipped 
+                      ? `rotateY(180deg) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)` // Si giró, aplicamos tilt al frente
+                      : `rotateY(0deg) rotateX(${rotate.x/2}deg) rotateY(${rotate.y/2}deg)` // Si no, tilt a la espalda
+                  }}
+                >
+                  
+                  {/* --- CARA TRASERA (BOCA ABAJO - SEINA LOGO) --- */}
+                  <div className="absolute inset-0 w-full h-full bg-slate-900 rounded-2xl border border-white/10 shadow-2xl flex items-center justify-center backface-hidden z-20 overflow-hidden">
+                    {/* Patrón de la espalda */}
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
+                    
+                    <div className="relative z-10 animate-pulse">
+                      <div className="w-24 h-24 rounded-full border-4 border-slate-700 flex items-center justify-center bg-slate-950">
+                         <span className="text-3xl font-black text-slate-700 italic">SE</span>
+                      </div>
                     </div>
                   </div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight">{data.name}</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-4">Nivel 1 • Novato</p>
-                  
-                  {/* Stats Ficticias de Inicio */}
-                  <div className="w-full grid grid-cols-2 gap-2 text-center mb-4">
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-[8px] text-slate-400 uppercase">XP</p>
-                      <p className="text-xs font-bold text-green-400">0 / 100</p>
+
+                  {/* --- CARA DELANTERA (BOCA ARRIBA - PERFIL) --- */}
+                  <div 
+                    ref={cardRef}
+                    className="absolute inset-0 w-full h-full bg-gradient-to-b from-slate-900 to-black rounded-2xl border border-white/20 p-6 flex flex-col items-center justify-between shadow-[0_0_50px_rgba(168,85,247,0.3)] backface-hidden [transform:rotateY(180deg)] overflow-hidden"
+                  >
+                    {/* Efecto Holográfico Automático (Barrido de brillo) */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent z-30 w-[200%] h-full animate-[shimmer_3s_infinite_linear] pointer-events-none" />
+                    
+                    {/* Header Carta */}
+                    <div className="w-full flex justify-between items-start mb-4 relative z-10">
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">TCG CARD</div>
+                        <div className="px-2 py-0.5 rounded bg-yellow-500/20 border border-yellow-500/50 text-[8px] font-black text-yellow-400 uppercase animate-pulse">★ LEGENDARY</div>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-[8px] text-slate-400 uppercase">Rango</p>
-                      <p className="text-xs font-bold text-yellow-400">F</p>
+
+                    {/* Avatar Épico */}
+                    <div className="relative w-32 h-32 mb-4 group-hover:scale-105 transition-transform duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-md opacity-50 animate-pulse"></div>
+                      <div className="relative w-full h-full rounded-full bg-slate-950 p-1 border-2 border-white/10">
+                         <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                            {/* Aquí iría la imagen del usuario real si la tuviera */}
+                            <span className="text-5xl filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">👾</span>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 text-center">
+                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 drop-shadow-lg">{data.name}</h3>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <p className="text-[10px] text-green-400 uppercase font-bold tracking-[0.2em]">Online</p>
+                      </div>
+                    </div>
+                    
+                    {/* Stats Footer */}
+                    <div className="w-full grid grid-cols-2 gap-0 border-t border-white/10 mt-auto pt-4 relative z-10">
+                      <div className="text-center border-r border-white/10">
+                        <p className="text-[8px] text-slate-500 uppercase font-bold">Nivel</p>
+                        <p className="text-xl font-black text-white">1</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[8px] text-slate-500 uppercase font-bold">Mazo</p>
+                        <p className="text-xl font-black text-white">0</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="text-[9px] text-slate-600 font-mono">ID: {Math.floor(Math.random() * 999999)}</div>
+
                 </div>
               </div>
 
-              {/* === OPCIONES DE CAMINO === */}
-              <div className="flex flex-col gap-4 w-full max-w-sm animate-in slide-in-from-right-8 duration-700 delay-300">
+              {/* === BOTONES LATERALES (APARECEN DESPUÉS) === */}
+              <div className={`flex flex-col gap-4 w-full max-w-sm transition-all duration-700 delay-200 ${showContent ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20'}`}>
                 
+                <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl mb-2">
+                  <p className="text-xs text-purple-200 font-medium italic text-center">
+                    "Bienvenido a Seina Market. Tu carta de jugador ha sido acuñada en la base de datos."
+                  </p>
+                </div>
+
                 {/* Botón Bodega */}
                 <button 
                   onClick={() => handleNavigation('/inventory')}
-                  className="group relative flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 border border-white/5 hover:border-purple-500/50 p-4 rounded-2xl transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] text-left"
+                  className="group relative flex items-center justify-between bg-slate-800 border-2 border-slate-700 hover:border-green-500 p-5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:-translate-y-1"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                    🎒
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-green-900/50 flex items-center justify-center text-green-400 font-black text-xl">
+                      🎒
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-sm font-black text-white uppercase">Ir a mi Bodega</h4>
+                      <p className="text-[10px] text-slate-400">Ver inventario inicial</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white uppercase">Ir a mi Bodega</h4>
-                    <p className="text-[10px] text-slate-400">Gestiona tu inventario inicial</p>
-                  </div>
-                  <span className="ml-auto text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">➜</span>
+                  <span className="text-slate-500 group-hover:text-green-400 transition-colors">➜</span>
                 </button>
 
                 {/* Botón Perfil */}
                 <button 
                   onClick={() => handleNavigation('/profile')}
-                  className="group relative flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 border border-white/5 hover:border-yellow-500/50 p-4 rounded-2xl transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.2)] text-left"
+                  className="group relative flex items-center justify-between bg-slate-800 border-2 border-slate-700 hover:border-blue-500 p-5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-1"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                    🛡️
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-900/50 flex items-center justify-center text-blue-400 font-black text-xl">
+                      🛡️
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-sm font-black text-white uppercase">Editar Perfil</h4>
+                      <p className="text-[10px] text-slate-400">Personalizar carta</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white uppercase">Editar Perfil</h4>
-                    <p className="text-[10px] text-slate-400">Personaliza tu avatar</p>
-                  </div>
-                  <span className="ml-auto text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">➜</span>
+                  <span className="text-slate-500 group-hover:text-blue-400 transition-colors">➜</span>
                 </button>
 
-                <p className="text-[9px] text-center text-slate-600 mt-4">
-                  Serás redirigido al Login para asegurar tu cuenta.
+                <p className="text-[9px] text-center text-slate-600 mt-4 font-mono">
+                  SISTEMA DE SEGURIDAD: REQUIERE LOGIN
                 </p>
               </div>
 
@@ -164,13 +247,13 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Fondos RPG */}
+      {/* Fondos y Formulario (Sin cambios funcionales) */}
       <div className="absolute inset-0 pointer-events-none">
          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#020617] to-[#020617]" />
          <div className="absolute bottom-0 right-0 w-full h-[500px] bg-gradient-to-t from-purple-900/10 to-transparent" />
       </div>
 
-      <div className={`relative z-10 w-full max-w-md p-8 bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl transition-all duration-500 ${showSuccess ? 'blur-xl scale-90 opacity-0 pointer-events-none' : 'animate-in fade-in slide-in-from-bottom-8'}`}>
+      <div className={`relative z-10 w-full max-w-md p-8 bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl transition-all duration-1000 ${showSuccess ? 'blur-xl scale-75 opacity-0 pointer-events-none translate-y-20' : 'animate-in fade-in slide-in-from-bottom-8'}`}>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black italic uppercase text-white mb-2 tracking-tighter">
             NUEVO <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">GUERRERO</span>
