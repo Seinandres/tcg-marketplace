@@ -3,28 +3,25 @@
 import { useState, useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 
 interface DashboardProps {
   totalActiveValue: number;
   totalSoldValue: number;
   activeCount: number;
   salesCount: number;
-  // Cambiamos recentSales por recentActivity para recibir TODO
   recentActivity: any[]; 
 }
 
-// FRASES DE LA IA "CORTEX" (LORE)
 const AI_PHRASES = [
-  "Analizando fluctuaciones del mercado TCG...",
-  "Oportunidad detectada en el sector de subastas.",
-  "Sistemas de seguridad de bóveda: ACTIVOS.",
-  "Recuerda: El valor es subjetivo, la victoria es absoluta.",
-  "Escaneando red en busca de compradores potenciales...",
-  "Tu reputación precede a tus ventas, Operador.",
-  "Los precios de Charizard están inestables hoy.",
-  "Sincronizando con la Blockchain de Seina...",
-  "Se detecta un aumento en la demanda de cartas selladas."
+  " ¡Nivel UP! Tu reputación de vendedor ha subido: +10% en visibilidad de subastas.",
+  " ¡Oportunidad ÉPICA! Carta rara detectada - gana XP comprando antes que expire.",
+  " Escaneando mercado TCG chileno... ¡Demanda explosiva en boosters sellados!",
+  "  ¡Victoria absoluta! Completa 5 ventas seguidas y desbloquea bono de nivel PRO.",
+  " Alerta de subasta: Charizard VMAX en llamas. ¡Sube de nivel apostando alto!",
+  " Tu bóveda de cartas está segura. Nivel 5 activado: descuentos exclusivos para compradores VIP.",
+  "  ¡Escalada de poder! Vende ahora y gana insignias que multiplican tus ganancias.",
+  " Red de compradores sincronizada. ¡Nivel ÉLITE desbloqueado: envíos express gratis!",
+  " Fluctuaciones detectadas: ¡Aprovecha el meta-game y domina el leaderboard chileno!"
 ];
 
 export default function DashboardRPG({ 
@@ -35,7 +32,9 @@ export default function DashboardRPG({
   recentActivity = [] 
 }: DashboardProps) {
   
-  const { data: session, status } = useSession();
+  // REEMPLAZO DE useSession() con fetch directo
+  const [session, setSession] = useState<any>(null);
+  const [status, setStatus] = useState("loading");
   
   // Estados RPG
   const [xp, setXp] = useState(250);
@@ -48,13 +47,29 @@ export default function DashboardRPG({
   const [aiText, setAiText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  // Efecto de montaje y Loop de la IA
+  // Cargar sesión al montar
   useEffect(() => {
-    setMounted(true);
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        setSession(data);
+        setStatus(data?.user ? "authenticated" : "unauthenticated");
+        setMounted(true);
+      })
+      .catch(() => {
+        setSession(null);
+        setStatus("unauthenticated");
+        setMounted(true);
+      });
+  }, []);
+
+  // Loop de la IA
+  useEffect(() => {
+    if (!mounted) return;
     const aiInterval = setInterval(() => { changeAiThought(); }, 8000);
     changeAiThought();
     return () => clearInterval(aiInterval);
-  }, []);
+  }, [mounted]);
 
   const changeAiThought = () => {
     setIsTyping(true);
@@ -75,7 +90,6 @@ export default function DashboardRPG({
     return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
   };
 
-  // MECÁNICA DE LOOT BOX (Regresamos a la CAJA TÁCTICA 📦)
   const openLootBox = () => {
     if (dailyClaimed || lootBoxState !== 'idle') return;
     setLootBoxState('shaking');
@@ -225,7 +239,7 @@ export default function DashboardRPG({
              </div>
           </div>
 
-          {/* 2. LOOT BOX "HOLOGRÁFICA" (El regreso de la CAJA DE CARTÓN TÁCTICA) */}
+          {/* 2. LOOT BOX */}
           <div className="lg:col-span-4 bg-gradient-to-b from-slate-900 to-purple-900/20 border border-white/10 rounded-3xl p-1 relative overflow-hidden flex flex-col shadow-2xl group">
             {!dailyClaimed && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent w-[200%] h-[200%] animate-[spin_4s_linear_infinite] opacity-50"></div>}
             
@@ -243,7 +257,6 @@ export default function DashboardRPG({
                    ${lootBoxState === 'opened' ? 'opacity-50 grayscale scale-95' : ''}
                  `}
                >
-                 {/* AQUI ESTÁ EL CAMBIO: Volvimos a la Caja de Cartón 📦 */}
                  <div className="relative text-8xl filter drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]">
                    {lootBoxState === 'opened' ? '🔓' : '📦'}
                    
@@ -271,7 +284,7 @@ export default function DashboardRPG({
             </div>
           </div>
 
-          {/* 3. RADAR DE ACTIVIDAD (ARREGLADO PARA VER TUS VENTAS) */}
+          {/* 3. RADAR DE ACTIVIDAD */}
           <div className="lg:col-span-12 bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-lg">
              <div className="p-3 border-b border-white/5 flex justify-between items-center bg-black/40 px-6">
                 <div className="flex items-center gap-2">
@@ -291,7 +304,6 @@ export default function DashboardRPG({
                      <div key={idx} className={`min-w-[200px] bg-slate-800/50 border border-white/5 p-3 rounded-lg flex flex-col gap-1 transition-colors group ${item.type === 'SOLD' ? 'hover:border-green-500/50' : 'hover:border-cyan-500/50'}`}>
                         <div className="flex justify-between items-start">
                           <span className="text-xs font-bold text-white truncate max-w-[120px]">{item.card?.name || "Objeto Clasificado"}</span>
-                          {/* ETIQUETA DINÁMICA: SOLD o BÓVEDA */}
                           <span className={`text-[8px] px-1 rounded border ${item.type === 'SOLD' ? 'text-green-400 bg-green-900/20 border-green-500/20' : 'text-cyan-400 bg-cyan-900/20 border-cyan-500/20'}`}>
                               {item.type === 'SOLD' ? 'SOLD' : 'BÓVEDA'}
                           </span>
@@ -304,7 +316,6 @@ export default function DashboardRPG({
                    ))}
                  </div>
                ) : (
-                 // RADAR VACÍO ANIMADO
                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-full max-w-lg h-[1px] bg-gradient-to-r from-transparent via-green-500/50 to-transparent animate-[scan-horizontal_3s_linear_infinite]"></div>
                     <p className="absolute text-[10px] text-green-500/50 font-mono tracking-widest bg-black px-2">BUSCANDO SEÑAL...</p>

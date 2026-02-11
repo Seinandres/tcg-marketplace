@@ -1,32 +1,25 @@
-// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AuthContext from "@/context/AuthContext"; 
-import Navbar from "@/components/Navbar"; // <--- ESTO FALTABA
+import Navbar from "@/components/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Seina Market | TCG Marketplace",
-  description: "El mejor mercado de cartas coleccionables de Chile",
+  title: "SEINA MARKET - Chile",
+  description: "Marketplace táctico de TCG",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
       <body className={inter.className}>
-        <AuthContext>
-          {/* El Navbar va DENTRO del AuthContext para saber si estás logueado */}
-          <Navbar /> 
-          <main>
-            {children}
-          </main>
-        </AuthContext>
+        <Navbar />
+        {children}
       </body>
     </html>
   );

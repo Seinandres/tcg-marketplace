@@ -1,4 +1,3 @@
-// src/app/auctions/AuctionsUI.tsx
 "use client";
 
 import { useState } from "react";
@@ -12,6 +11,7 @@ import PriceHistoryChart from "@/components/PriceHistoryChart";
 import WatchlistButton from "@/components/WatchlistButton";
 
 export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
+  const [auctions, setAuctions] = useState(initialAuctions);
   const [featuredAuction, setFeaturedAuction] = useState(initialAuctions[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -27,13 +27,34 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
     }
   };
 
+  const refreshAuctionData = async () => {
+    try {
+      const response = await fetch(`/api/listings/${featuredAuction.id}`);
+      if (response.ok) {
+        const updatedListing = await response.json();
+        setFeaturedAuction(updatedListing);
+        
+        setAuctions(prevAuctions =>
+          prevAuctions.map(a =>
+            a.id === updatedListing.id ? updatedListing : a
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error refreshing auction:', error);
+    }
+  };
+
   const xpPotential = Math.floor(featuredAuction.price / 500);
-  const currentLevel = 12;
   
+  const sellerLevel = featuredAuction.user?.heroLevel || 1;
+  const sellerTitle = featuredAuction.user?.heroTitle || "Recluta";
+  const sellerColor = featuredAuction.user?.heroColor || "#3b82f6";
+  const sellerName = featuredAuction.user?.name || "Mercader Anónimo";
+
   return (
     <div className="min-h-screen bg-[#020617] text-white pb-20 relative overflow-hidden font-sans">
       
-      {/* ==================== MODAL OPTIMIZADO ==================== */}
       {isModalOpen && featuredAuction && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3">
           <div 
@@ -41,16 +62,13 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* Container del Modal */}
           <div className="relative bg-gradient-to-br from-[#0f172a] to-[#1e1b4b] border border-purple-500/20 rounded-3xl w-full max-w-[95vw] lg:max-w-6xl max-h-[92vh] shadow-[0_0_100px_rgba(168,85,247,0.4)] animate-in zoom-in-95 duration-500 overflow-hidden flex flex-col">
             
-            {/* Efectos de fondo */}
             <div className="absolute inset-0 opacity-20 pointer-events-none">
               <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
               <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             </div>
 
-            {/* Header del Modal */}
             <div className="relative border-b border-white/10 bg-black/20 backdrop-blur-md flex-shrink-0">
               <div className="flex items-center justify-between p-4 lg:p-5">
                 <div className="flex items-center gap-3">
@@ -62,7 +80,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                       Inspección de Artefacto
                     </h2>
                     <p className="text-[8px] lg:text-[9px] text-purple-400 uppercase font-bold tracking-widest">
-                      Lote #{featuredAuction.id.slice(0, 8)}
+                      Contrato #{featuredAuction.id.slice(0, 8)}
                     </p>
                   </div>
                 </div>
@@ -77,13 +95,12 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 </button>
               </div>
 
-              {/* Tab Navigation */}
               <div className="flex gap-1 px-4 lg:px-5 pb-3">
                 {[
                   { id: 'overview', icon: '🎴', label: 'Vista General' },
                   { id: 'stats', icon: '📊', label: 'Estadísticas' },
                   { id: 'bids', icon: '⚔️', label: 'Historial' },
-                  { id: 'seller', icon: '👤', label: 'Vendedor' }
+                  { id: 'seller', icon: '👤', label: 'Mercader' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -101,26 +118,22 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
               </div>
             </div>
 
-            {/* Contenido del Modal - SCROLL OPTIMIZADO */}
             <div className="relative overflow-y-auto flex-1 custom-scrollbar">
               <div className="p-4 lg:p-6">
                 
-                {/* TAB: VISTA GENERAL */}
                 {activeTab === 'overview' && (
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     
-                    {/* IZQUIERDA: Imagen de la Carta */}
                     <div className="lg:col-span-2 space-y-4">
                       <div className="relative group perspective-1000">
                         <div className="absolute -inset-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
                         
-                        {/* CARTA */}
                         <div className="relative bg-gradient-to-br from-[#050a14] to-purple-950/30 rounded-3xl p-4 lg:p-5 border border-purple-500/20 shadow-2xl overflow-hidden card-tilt">
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                           
                           <div className="relative aspect-[2.5/3.5] w-full max-w-[280px] mx-auto">
                             <Image 
-                              src={featuredAuction.card.imageUrlLarge || featuredAuction.card.imageUrlSmall} 
+                              src={featuredAuction.card.imageUrlHiRes || featuredAuction.card.image || featuredAuction.card.imageUrlSmall} 
                               alt={featuredAuction.card.name} 
                               fill 
                               className="object-contain drop-shadow-[0_20px_80px_rgba(168,85,247,0.6)] group-hover:scale-105 transition-transform duration-700"
@@ -141,13 +154,12 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                           <div className="absolute bottom-3 left-0 right-0 text-center">
                             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-xl border border-yellow-500/40 text-yellow-300 text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-2xl tracking-widest">
                               <span className="text-xs">✨</span>
-                              Ultra Raro • Edición Limitada
+                              {featuredAuction.card.rarity || "Ultra Raro"} • Edición Limitada
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Live Viewers */}
                       <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="flex -space-x-1.5">
@@ -161,7 +173,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             </div>
                           </div>
                           <div>
-                            <p className="text-[11px] font-black text-white">11 personas viendo</p>
+                            <p className="text-[11px] font-black text-white">11 cazadores rastreando</p>
                             <p className="text-[7px] text-slate-500 uppercase font-bold">Interés Alto 🔥</p>
                           </div>
                         </div>
@@ -172,7 +184,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                       </div>
                     </div>
 
-                    {/* DERECHA: Info y Acciones */}
                     <div className="lg:col-span-3 space-y-4 lg:space-y-5">
                       <div>
                         <div className="flex items-start justify-between mb-3">
@@ -181,7 +192,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                               {featuredAuction.card.name}
                             </h3>
                             <p className="text-xs lg:text-sm text-purple-400 font-bold uppercase tracking-widest mb-2.5">
-                              {featuredAuction.card.set.name}
+                              {featuredAuction.card.set || "Set Desconocido"}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-500/30 rounded-lg text-[8px] font-bold text-blue-300 uppercase">
@@ -191,7 +202,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 Verificado
                               </span>
                               <span className="px-2.5 py-0.5 bg-purple-500/20 border border-purple-500/30 rounded-lg text-[8px] font-bold text-purple-300 uppercase flex items-center gap-1">
-                                <span>⚡</span> +{Math.floor(featuredAuction.price / 500)} XP
+                                <span>⚡</span> +{xpPotential} XP
                               </span>
                             </div>
                           </div>
@@ -204,7 +215,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         <div className="relative">
                           <p className="text-[8px] text-green-400 uppercase font-black tracking-widest mb-1.5 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                            Oferta Actual Líder
+                            Valor del Botín Actual
                           </p>
                           <div className="flex items-baseline gap-2.5 mb-2">
                             <p className="text-3xl lg:text-5xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
@@ -227,7 +238,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                       <div className="bg-slate-900/60 border border-red-500/20 rounded-2xl p-4 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <p className="text-[8px] text-red-400 uppercase font-black tracking-widest flex items-center gap-1.5">
-                            <span className="animate-pulse">⏰</span> Tiempo Restante
+                            <span className="animate-pulse">⏰</span> Tiempo Restante del Contrato
                           </p>
                           <span className="text-[7px] text-slate-500 font-bold">Cierra: 18 Feb, 21:00</span>
                         </div>
@@ -266,23 +277,22 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="text-[7px] text-slate-500 uppercase font-bold mb-0.5">Precio Promedio</p>
+                            <p className="text-[7px] text-slate-500 uppercase font-bold mb-0.5">Valor Promedio</p>
                             <p className="text-base lg:text-lg font-black text-blue-300">${(featuredAuction.price * 0.9).toLocaleString('es-CL')}</p>
                           </div>
                           <div>
-                            <p className="text-[7px] text-slate-500 uppercase font-bold mb-0.5">Precio Máximo</p>
+                            <p className="text-[7px] text-slate-500 uppercase font-bold mb-0.5">Valor Máximo</p>
                             <p className="text-base lg:text-lg font-black text-purple-300">${(featuredAuction.price * 1.2).toLocaleString('es-CL')}</p>
                           </div>
                         </div>
                         <p className="text-[7px] lg:text-[8px] text-blue-300/70 italic">
-                          Esta carta está <span className="font-bold text-green-400">8% por debajo</span> del promedio de mercado
+                          Esta reliquia está <span className="font-bold text-green-400">8% por debajo</span> del valor promedio
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* TAB: ESTADÍSTICAS */}
                 {activeTab === 'stats' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <h3 className="text-xl lg:text-2xl font-black uppercase text-white flex items-center gap-2.5">
@@ -295,7 +305,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         { label: 'Participantes', value: new Set(featuredAuction.bids.map(b => b.userId)).size, icon: '👥' },
                         { label: 'Puja Promedio', value: `$${Math.floor(featuredAuction.price * 0.85).toLocaleString('es-CL')}`, icon: '💰' },
                         { label: 'Incremento', value: `+${(((featuredAuction.price - featuredAuction.price * 0.7) / (featuredAuction.price * 0.7)) * 100).toFixed(1)}%`, icon: '📈' },
-                        { label: 'XP Potencial', value: `+${Math.floor(featuredAuction.price / 500)}`, icon: '⚡' },
+                        { label: 'XP Potencial', value: `+${xpPotential}`, icon: '⚡' },
                         { label: 'Vistas', value: '342', icon: '👁️' }
                       ].map((stat, i) => (
                         <div key={i} className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 hover:border-purple-500/30 transition-all group">
@@ -323,7 +333,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                   </div>
                 )}
 
-                {/* TAB: HISTORIAL DE PUJAS */}
                 {activeTab === 'bids' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex items-center justify-between">
@@ -337,9 +346,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                     </div>
 
                     <div className="bg-slate-900/40 border border-white/10 rounded-2xl overflow-hidden min-h-[300px]">
-                      <BidHistory 
-                        initialBids={featuredAuction.bids} 
-                      />
+                      <BidHistory initialBids={featuredAuction.bids} listingId={featuredAuction.id} />
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
@@ -363,22 +370,30 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                   </div>
                 )}
 
-                {/* TAB: VENDEDOR */}
                 {activeTab === 'seller' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <h3 className="text-xl lg:text-2xl font-black uppercase text-white flex items-center gap-2.5">
-                      <span className="text-2xl lg:text-3xl">👤</span> Perfil del Vendedor
+                      <span className="text-2xl lg:text-3xl">👤</span> Perfil del Mercader
                     </h3>
 
                     <div className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-purple-500/20 rounded-3xl p-6 lg:p-8">
                       <div className="flex flex-col md:flex-row gap-5 lg:gap-6">
                         <div className="flex flex-col items-center gap-3.5">
                           <div className="relative">
-                            <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-purple-500/50">
+                            <div 
+                              className="w-28 h-28 lg:w-32 lg:h-32 rounded-2xl flex items-center justify-center shadow-2xl"
+                              style={{ 
+                                background: `linear-gradient(135deg, ${sellerColor}22, ${sellerColor}88)`,
+                                boxShadow: `0 10px 40px ${sellerColor}50`
+                              }}
+                            >
                               <span className="text-4xl lg:text-5xl">🎮</span>
                             </div>
-                            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-0.5 rounded-full text-[10px] font-black uppercase shadow-lg">
-                              Nivel 47
+                            <div 
+                              className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 text-black px-3 py-0.5 rounded-full text-[10px] font-black uppercase shadow-lg"
+                              style={{ background: sellerColor }}
+                            >
+                              Nivel {sellerLevel}
                             </div>
                           </div>
                           
@@ -396,8 +411,13 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
 
                         <div className="flex-1 space-y-3.5">
                           <div>
-                            <h4 className="text-xl lg:text-2xl font-black text-white mb-0.5">MaestroCartas_CL</h4>
-                            <p className="text-xs lg:text-sm text-purple-400 font-bold uppercase tracking-wider">Vendedor Verificado ✓</p>
+                            <h4 className="text-xl lg:text-2xl font-black text-white mb-0.5">{sellerName}</h4>
+                            <p 
+                              className="text-xs lg:text-sm font-bold uppercase tracking-wider"
+                              style={{ color: sellerColor }}
+                            >
+                              {sellerTitle} • Verificado ✓
+                            </p>
                           </div>
 
                           <div className="flex flex-wrap gap-1.5">
@@ -431,13 +451,13 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
 
                           <div className="bg-black/20 border border-white/5 rounded-xl p-3">
                             <p className="text-[10px] lg:text-xs text-slate-300 leading-relaxed">
-                              "Coleccionista profesional con más de 10 años de experiencia. Todas mis cartas son auténticas, gradeadas y enviadas con el máximo cuidado. ¡Tu satisfacción es mi prioridad! 🎴"
+                              "Mercader profesional con más de 10 años de experiencia. Todas mis reliquias son auténticas, gradeadas y enviadas con el máximo cuidado. ¡Tu satisfacción es mi prioridad! 🎴"
                             </p>
                           </div>
 
                           <button className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-white/10 hover:border-purple-500/50 text-white font-bold uppercase text-[10px] tracking-wider py-2.5 rounded-xl transition-all hover:scale-105 flex items-center justify-center gap-1.5">
                             <span>💬</span>
-                            <span>Contactar Vendedor</span>
+                            <span>Contactar Mercader</span>
                           </button>
                         </div>
                       </div>
@@ -451,16 +471,16 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             <span className="text-2xl">🌟</span>
                           </div>
                           <div>
-                            <h4 className="text-lg font-black uppercase text-white">¿Quieres ser un Maestro Vendedor?</h4>
-                            <p className="text-xs text-purple-400 font-bold">Únete a nuestra comunidad élite</p>
+                            <h4 className="text-lg font-black uppercase text-white">¿Quieres ser un Maestro Mercader?</h4>
+                            <p className="text-xs text-purple-400 font-bold">Únete a la élite de comerciantes</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {[
-                            { icon: '💰', title: 'Gana más', desc: 'Comisiones reducidas para top sellers' },
-                            { icon: '⚡', title: 'Sube niveles', desc: 'Gana XP por cada venta exitosa' },
-                            { icon: '🏆', title: 'Desbloquea badges', desc: 'Accede a beneficios exclusivos' }
+                            { icon: '💰', title: 'Gana más', desc: 'Comisiones reducidas para mercaderes élite' },
+                            { icon: '⚡', title: 'Sube niveles', desc: 'Gana XP por cada transacción exitosa' },
+                            { icon: '🏆', title: 'Desbloquea Items', desc: 'Accede a reliquias y buffs exclusivos' }
                           ].map((benefit, i) => (
                             <div key={i} className="bg-black/20 border border-white/5 rounded-xl p-3">
                               <div className="text-2xl mb-1.5">{benefit.icon}</div>
@@ -472,7 +492,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
 
                         <button className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase text-xs tracking-wider py-3.5 rounded-xl shadow-xl hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
                           <span>🚀</span>
-                          <span>Empezar a Vender Ahora</span>
+                          <span>Convertirme en Mercader</span>
                         </button>
                       </div>
                     </div>
@@ -482,7 +502,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
               </div>
             </div>
 
-            {/* Footer del Modal */}
             <div className="relative border-t border-white/10 bg-black/20 backdrop-blur-md p-4 flex-shrink-0">
               <div className="flex flex-col md:flex-row gap-3">
                 <Link 
@@ -491,7 +510,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2.5 group-hover:gap-3.5 transition-all">
                     <span>⚔️</span>
-                    Ir al Panel de Batalla Completo
+                    Ir al Panel de Misión Completo
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
                     </svg>
@@ -511,7 +530,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
         </div>
       )}
 
-      {/* ==================== EFECTOS DE FONDO (NO TOCAR) ==================== */}
       <div className="fixed inset-0 pointer-events-none z-0">
          <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-purple-900/15 via-transparent to-transparent" />
          <div className="absolute inset-0 opacity-[0.03]" 
@@ -525,7 +543,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_80%,_rgba(59,130,246,0.1)_0%,_transparent_50%)]" />
       </div>
 
-      {/* ==================== HEADER ARENA (NO TOCAR) ==================== */}
       <div className="relative h-[45vh] flex items-center justify-center overflow-hidden border-b border-white/5 bg-[#020617]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-slate-950 to-transparent" />
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
@@ -537,7 +554,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 <span className="relative flex items-center gap-2 py-2 px-5 rounded-full bg-gradient-to-r from-red-500/10 to-pink-500/10 text-red-500 border border-red-500/30 text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(239,68,68,0.3)] backdrop-blur-md">
                     <span className="absolute w-2 h-2 bg-red-500 rounded-full animate-ping" />
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
-                    <span className="relative z-10">Subastas en Tiempo Real</span>
+                    <span className="relative z-10">Contratos en Tiempo Real</span>
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                     <span className="absolute w-2 h-2 bg-red-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
                 </span>
@@ -547,7 +564,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 ARENA DE{' '}
                 <span className="relative inline-block">
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-2xl animate-pulse">
-                        LOTES
+                        CONTRATOS
                     </span>
                     <span className="absolute -inset-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 blur-xl -z-10" />
                 </span>
@@ -559,11 +576,11 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 </span>
                 <span className="text-white/20">|</span>
                 <span className="flex items-center gap-2 text-green-400 hover:text-green-300 transition-colors cursor-default group">
-                    <span className="group-hover:scale-110 transition-transform">⚡</span> Suma +XP por Venta
+                    <span className="group-hover:scale-110 transition-transform">⚡</span> +{xpPotential} XP por Misión
                 </span>
                 <span className="text-white/20">|</span>
                 <span className="flex items-center gap-2 hover:text-purple-400 transition-colors cursor-default group">
-                    <span className="group-hover:scale-110 transition-transform">💎</span> Cartas Gradeadas
+                    <span className="group-hover:scale-110 transition-transform">💎</span> Reliquias Verificadas
                 </span>
                 <span className="text-white/20">|</span>
                 <span className="flex items-center gap-2 text-purple-400 italic hover:text-pink-400 transition-colors cursor-default group">
@@ -573,20 +590,17 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
         </div>
       </div>
 
-      {/* ==================== CONTENIDO PRINCIPAL ==================== */}
       <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-30">
-        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             
-            {/* ==================== COLUMNA IZQUIERDA: GRILLA ==================== */}
             <div className="lg:col-span-2 space-y-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-md p-5 rounded-[2rem] border border-white/10 shadow-2xl">
                     <div className="flex items-center gap-4 flex-wrap">
                         <h2 className="text-sm font-black uppercase italic text-slate-300 flex items-center gap-3 tracking-widest">
                             <span className="text-xl animate-pulse">⚔️</span> 
-                            Lista de Combate
+                            Tablero de Misiones
                             <span className="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full text-xs font-black">
-                                {initialAuctions.length}
+                                {auctions.length}
                             </span>
                         </h2>
                     </div>
@@ -599,14 +613,14 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             ⏳ <span>Finalizando</span>
                         </button>
                         <button className="bg-slate-800/50 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-white/5 hover:border-purple-500 transition-all hover:bg-purple-500/10 active:scale-95 hover:shadow-lg hover:shadow-purple-500/20 flex items-center gap-1.5">
-                            💰 <span>Precio</span>
+                            💰 <span>Botín</span>
                         </button>
                     </div>
                 </div>
 
-                {initialAuctions.length > 0 ? (
+                {auctions.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                        {initialAuctions.map((item, index) => {
+                        {auctions.map((item, index) => {
                             const bidCount = item.bids.length;
                             const uniqueBidders = new Set(item.bids.map(b => b.userId)).size;
                             const xpReward = Math.floor(item.price / 1000);
@@ -629,7 +643,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="space-y-2">
                                                 <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase text-white border border-white/10 shadow-lg">
-                                                    LOTE #{index + 1}
+                                                    CONTRATO #{index + 1}
                                                 </div>
                                                 <div className="bg-purple-500/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-purple-300 border border-purple-500/30 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     +{xpReward} XP
@@ -642,7 +656,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                                 </div>
                                                 {bidCount > 0 && (
                                                     <div className="bg-blue-500/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[7px] font-bold text-blue-300 border border-blue-500/30">
-                                                        {bidCount} puja{bidCount !== 1 ? 's' : ''}
+                                                        {bidCount} oferta{bidCount !== 1 ? 's' : ''}
                                                     </div>
                                                 )}
                                             </div>
@@ -650,13 +664,13 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
 
                                         <div className="relative aspect-[3/4] mb-5 rounded-3xl overflow-hidden bg-gradient-to-br from-[#050a14] to-purple-950/10 border border-white/5 group-hover:border-purple-500/30 transition-colors">
                                             <Image 
-                                                src={item.card.imageUrlSmall} 
+                                                src={item.card.imageUrlHiRes || item.card.image || item.card.imageUrlSmall} 
                                                 alt={item.card.name} 
                                                 fill 
                                                 className="object-contain p-4 group-hover:scale-110 transition-transform duration-700 ease-out" 
                                             />
                                             <div className="absolute bottom-2 right-2 bg-blue-500/20 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold text-blue-300 border border-blue-500/30 shadow-lg">
-                                                NM/MINT
+                                                {item.condition || "NM/MINT"}
                                             </div>
                                             {uniqueBidders > 2 && (
                                                 <div className="absolute top-2 left-2 bg-red-500/20 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold text-red-300 border border-red-500/30 shadow-lg flex items-center gap-1">
@@ -671,14 +685,14 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                                     {item.card.name}
                                                 </h3>
                                                 <p className="text-[8px] text-slate-500 uppercase font-bold tracking-wider truncate">
-                                                    {item.card.set.name}
+                                                    {item.card.set || "Set Desconocido"}
                                                 </p>
                                             </div>
                                             
                                             <div className="bg-black/40 border border-white/5 group-hover:border-purple-500/20 rounded-2xl p-3 transition-colors space-y-3">
                                                 <div className="flex justify-between items-center">
                                                     <div>
-                                                        <p className="text-[7px] text-slate-500 uppercase font-black tracking-widest mb-0.5">Oferta</p>
+                                                        <p className="text-[7px] text-slate-500 uppercase font-black tracking-widest mb-0.5">Botín</p>
                                                         <p className="text-sm font-mono font-bold text-green-400 leading-none">
                                                             ${item.price.toLocaleString('es-CL')}
                                                         </p>
@@ -690,8 +704,8 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                                 </div>
                                                 {uniqueBidders > 0 && (
                                                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                                        <p className="text-[7px] text-slate-500 uppercase font-bold">Participantes</p>
-                                                        <p className="text-[8px] text-purple-400 font-black">{uniqueBidders} guerrero{uniqueBidders !== 1 ? 's' : ''}</p>
+                                                        <p className="text-[7px] text-slate-500 uppercase font-bold">Cazadores</p>
+                                                        <p className="text-[8px] text-purple-400 font-black">{uniqueBidders} activo{uniqueBidders !== 1 ? 's' : ''}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -704,27 +718,25 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                 ) : (
                     <div className="p-20 text-center bg-slate-900/20 rounded-[3rem] border-2 border-dashed border-white/5">
                         <div className="text-5xl mb-6 opacity-20 filter grayscale">🃏</div>
-                        <p className="text-slate-500 font-black uppercase text-xs tracking-[0.3em] mb-6">El gran salón está vacío.</p>
+                        <p className="text-slate-500 font-black uppercase text-xs tracking-[0.3em] mb-6">No hay misiones disponibles</p>
                         <Link href="/sell" className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:scale-105 transition-transform shadow-xl">
-                            ⚔️ Iniciar Primera Batalla
+                            ⚔️ Crear Primera Misión
                         </Link>
                     </div>
                 )}
             </div>
 
-            {/* ==================== COLUMNA DERECHA: SIDEBAR ==================== */}
             <div className="lg:col-span-1">
                 <div className="sticky top-24 space-y-6 animate-in fade-in slide-in-from-right-8 duration-1000">
                     {featuredAuction ? (
                         <>
-                            {/* ===== CARTA DESTACADA ===== */}
                             <div className="relative group">
                                 <div className="absolute -inset-2 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-50 transition-all duration-1000 animate-pulse"></div>
                                 <div className="relative bg-gradient-to-b from-slate-900 to-slate-950 border border-white/10 rounded-[2.3rem] p-2 shadow-2xl overflow-hidden">
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                                     <div className="relative aspect-square w-full rounded-[1.8rem] overflow-hidden bg-gradient-to-br from-[#050a14] to-purple-950/20">
                                         <Image 
-                                            src={featuredAuction.card.imageUrlLarge || featuredAuction.card.imageUrlSmall} 
+                                            src={featuredAuction.card.imageUrlHiRes || featuredAuction.card.image || featuredAuction.card.imageUrlSmall} 
                                             alt="Featured" 
                                             fill 
                                             className="object-contain p-6 group-hover:scale-105 transition-transform duration-700" 
@@ -733,7 +745,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                         <div className="absolute bottom-6 left-0 right-0 text-center animate-bounce" style={{ animationDuration: '3s' }}>
                                             <span className="bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[9px] font-black uppercase px-4 py-2 rounded-full shadow-2xl tracking-[0.2em] inline-flex items-center gap-2">
                                                 <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-                                                ★ Lote Seleccionado
+                                                ★ Contrato Activo
                                             </span>
                                         </div>
                                         <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
@@ -742,14 +754,13 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                             </div>
                                             <div className="bg-green-500/20 backdrop-blur-md border border-green-500/30 rounded-xl px-2 py-1 text-[8px] font-black text-green-300 uppercase tracking-wider flex items-center gap-1">
                                                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                                                {featuredAuction.bids.length} pujas
+                                                {featuredAuction.bids.length} ofertas
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* ===== INFO PRINCIPAL ===== */}
                             <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 shadow-2xl space-y-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1">
@@ -757,7 +768,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                             {featuredAuction.card.name}
                                         </h3>
                                         <p className="text-[9px] text-purple-400 font-bold uppercase tracking-widest">
-                                            {featuredAuction.card.set.name}
+                                            {featuredAuction.card.set || "Set Desconocido"}
                                         </p>
                                     </div>
                                     <WatchlistButton listingId={featuredAuction.id} />
@@ -765,7 +776,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 <div className="bg-black/40 border border-purple-500/20 rounded-2xl p-5 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5"></div>
                                     <div className="relative">
-                                        <p className="text-[8px] text-slate-400 uppercase font-black tracking-widest mb-2">Oferta Actual</p>
+                                        <p className="text-[8px] text-slate-400 uppercase font-black tracking-widest mb-2">Valor del Botín</p>
                                         <div className="flex items-baseline gap-3">
                                             <p className="text-4xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
                                                 ${featuredAuction.price.toLocaleString('es-CL')}
@@ -773,7 +784,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                             <span className="text-[10px] text-green-400 font-bold animate-pulse">CLP</span>
                                         </div>
                                         <p className="text-[7px] text-slate-500 uppercase font-bold mt-2">
-                                            Precio inicial: ${(featuredAuction.price * 0.7).toLocaleString('es-CL')}
+                                            Valor inicial: ${(featuredAuction.price * 0.7).toLocaleString('es-CL')}
                                         </p>
                                     </div>
                                 </div>
@@ -783,12 +794,12 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 </div>
                             </div>
 
-                            {/* ===== QUICK BID & STATS ===== */}
                             <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 shadow-2xl">
                                 <QuickBidPanel 
                                     currentPrice={featuredAuction.price}
                                     minIncrement={1000}
                                     listingId={featuredAuction.id}
+                                    onBidPlaced={refreshAuctionData}
                                 />
                             </div>
                             <XPRewardPreview currentPrice={featuredAuction.price} />
@@ -797,7 +808,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 href={`/cards/${featuredAuction.card.id}`}
                                 className="block w-full text-center py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-widest transition-all border border-white/5 hover:border-white/20"
                             >
-                                Ver Página Completa de Carta →
+                                Ver Detalles Completos →
                             </Link>
 
                             <PriceHistoryChart 
@@ -808,7 +819,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                             <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden">
                                 <div className="p-5 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-white/[0.02] to-purple-500/[0.02]">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">📜 Historial Real</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">📜 Historial de Ofertas</span>
                                         <span className="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -821,7 +832,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 <div className="p-1">
                                     <BidHistory 
                                         listingId={featuredAuction.id}
-                                        currentPrice={featuredAuction.price}
                                         initialBids={featuredAuction.bids} 
                                     />
                                 </div>
@@ -833,24 +843,24 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                         <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <span className="text-sm">👥</span>
                                         </div>
-                                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Participantes</p>
+                                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Cazadores</p>
                                     </div>
                                     <p className="text-2xl font-black text-white">
                                         {new Set(featuredAuction.bids.map(b => b.userId)).size}
                                     </p>
-                                    <p className="text-[7px] text-purple-400 uppercase font-bold mt-1">Guerreros</p>
+                                    <p className="text-[7px] text-purple-400 uppercase font-bold mt-1">Activos</p>
                                 </div>
                                 <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 hover:border-pink-500/30 transition-all group">
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <span className="text-sm">⚔️</span>
                                         </div>
-                                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Total Pujas</p>
+                                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Ofertas</p>
                                     </div>
                                     <p className="text-2xl font-black text-white">
                                         {featuredAuction.bids.length}
                                     </p>
-                                    <p className="text-[7px] text-pink-400 uppercase font-bold mt-1">Batallas</p>
+                                    <p className="text-[7px] text-pink-400 uppercase font-bold mt-1">Total</p>
                                 </div>
                             </div>
 
@@ -859,26 +869,26 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full blur-2xl group-hover:bg-pink-500/20 transition-colors"></div>
                                 <div className="relative space-y-4">
                                     <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-2">
-                                        <span className="text-lg">📜</span> Reglas de la Arena
+                                        <span className="text-lg">📜</span> Reglas del Contrato
                                     </p>
                                     <div className="space-y-2">
                                         <div className="flex items-start gap-2">
                                             <span className="text-purple-400 text-xs mt-0.5">•</span>
                                             <p className="text-[9px] text-slate-300 leading-relaxed">
-                                                Cada puja extiende el tiempo por <span className="text-purple-400 font-bold">30 segundos</span>
+                                                Cada oferta extiende el tiempo por <span className="text-purple-400 font-bold">30 segundos</span>
                                             </p>
                                         </div>
                                         <div className="flex items-start gap-2">
                                             <span className="text-purple-400 text-xs mt-0.5">•</span>
                                             <p className="text-[9px] text-slate-300 leading-relaxed">
-                                                Gana <span className="text-yellow-400 font-bold">XP</span> por cada puja y bonus al ganar
+                                                Gana <span className="text-yellow-400 font-bold">+{xpPotential} XP</span> al completar el contrato
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 pt-3 border-t border-purple-500/10">
                                         <span className="text-base">⚡</span>
                                         <p className="text-[8px] text-purple-300 font-bold">
-                                            Sube de nivel y desbloquea beneficios exclusivos
+                                            Sube de nivel y desbloquea reliquias exclusivas
                                         </p>
                                     </div>
                                 </div>
@@ -903,7 +913,7 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
                         <div className="p-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-30 bg-slate-900/20">
                             <div className="text-4xl mb-4 filter grayscale animate-pulse">⚔️</div>
                             <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest italic">
-                                Esperando combatientes...
+                                Esperando misiones...
                             </p>
                         </div>
                     )}
@@ -912,7 +922,6 @@ export default function AuctionsUI({ initialAuctions, auctionEndDate }) {
         </div>
       </div>
 
-      {/* Estilos personalizados */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;

@@ -1,118 +1,244 @@
-// src/components/Navbar.tsx
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Navbar() {
-  const { data: session } = useSession(); // Detecta si el usuario está logueado
+  const router = useRouter();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [session, setSession] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [equippedCount, setEquippedCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        setSession(data);
+        setIsLoading(false);
+        
+        if (data?.user) {
+          fetch('/api/inventory')
+            .then(res => res.json())
+            .then(invData => {
+              setEquippedCount(invData.stats?.equipped || 0);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        setSession(null);
+        setIsLoading(false);
+      });
+  }, [pathname]);
+
+  const handleSignOut = async () => {
+    await fetch('/api/auth/signout', { method: 'POST' });
+    setSession(null);
+    router.push('/login');
+  };
+
+  if (isLoading) {
+    return (
+      <nav className="sticky top-0 z-[100] bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+          <div className="h-12 w-48 bg-slate-800/50 animate-pulse rounded-xl"></div>
+          <div className="h-10 w-32 bg-slate-800/50 animate-pulse rounded-full"></div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+    <nav className="sticky top-0 z-[100] bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl">
+      <div className="max-w-[1400px] mx-auto flex items-center justify-between">
         
-        {/* LOGO (Igual a tu imagen) */}
-        <Link href="/" className="flex items-center gap-1 group">
-          <span className="text-2xl font-black italic tracking-tighter text-white group-hover:scale-105 transition-transform">
-            SEINA
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
-              MARKET
+        <div className="flex items-center gap-10">
+          <Link href={session ? "/dashboard" : "/"} className="flex items-center gap-3 group">
+            <span className="text-3xl font-black italic tracking-tighter text-white group-hover:text-purple-400 transition-colors">
+              SEINA<span className="text-purple-500 group-hover:text-pink-500">MARKET</span>
             </span>
-          </span>
-          <span className="hidden sm:block text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5 ml-2">
-            Chile Marketplace
-          </span>
-        </Link>
+            <span className="hidden md:block text-[7px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-2 border-l border-white/10 pl-3">
+              Chile Marketplace
+            </span>
+          </Link>
 
-        {/* MENU CENTRAL (Links de tu captura) */}
-        <div className="hidden md:flex items-center gap-8">
-          {[
-            { name: 'INICIO', path: '/' },
-            { name: 'SUBASTAS', path: '/auctions' },
-            { name: 'SELLADO', path: '/sealed' },
-            { name: 'PREMIUM', path: '/premium', icon: '⭐' }
-          ].map((link) => (
+          <div className="hidden lg:flex items-center gap-8">
             <Link 
-              key={link.name} 
-              href={link.path}
-              className={`text-[10px] font-black uppercase tracking-[0.15em] transition-colors flex items-center gap-1.5 ${
-                link.name === 'PREMIUM' ? 'text-yellow-400 hover:text-yellow-200' : 'text-slate-300 hover:text-white'
+              href={session ? "/dashboard" : "/"} 
+              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-purple-400 ${
+                pathname === '/' || pathname === '/dashboard' ? 'text-purple-400' : 'text-slate-400'
               }`}
             >
-              {link.icon && <span>{link.icon}</span>}
-              {link.name}
+              INICIO
             </Link>
-          ))}
+            <Link 
+              href="/auctions" 
+              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-purple-400 ${
+                pathname === '/auctions' ? 'text-purple-400' : 'text-slate-400'
+              }`}
+            >
+              SUBASTAS
+            </Link>
+            <Link 
+              href="/sealed" 
+              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-purple-400 ${
+                pathname === '/sealed' ? 'text-purple-400' : 'text-slate-400'
+              }`}
+            >
+              SELLADO
+            </Link>
+            
+            {/* NUEVO: Link a la tienda */}
+            {session?.user && (
+              <Link 
+                href="/shop" 
+                className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-yellow-400 ${
+                  pathname === '/shop' ? 'text-yellow-400' : 'text-slate-400'
+                }`}
+              >
+                <span className="text-sm">🏪</span> ARSENAL
+              </Link>
+            )}
+            
+            <Link 
+              href="/premium" 
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 hover:text-yellow-400 transition-all"
+            >
+              <span className="text-sm">★</span> PREMIUM
+            </Link>
+          </div>
         </div>
 
-        {/* ZONA DERECHA (Usuario y Acciones) */}
         <div className="flex items-center gap-4">
           
-          {/* Lógica de Sesión: Si hay usuario muestra Perfil, si no, muestra Login */}
           {session?.user ? (
-            // --- ESTADO: LOGUEADO ---
-            <div className="flex items-center gap-4">
-              <div className="hidden md:block text-right">
-                <p className="text-[10px] font-bold text-white leading-none">{session.user.name}</p>
-                <p className="text-[8px] text-purple-400 font-black uppercase tracking-wider">Nivel 1</p>
-              </div>
-              
-              <div className="relative group cursor-pointer">
-                {/* Avatar del usuario */}
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 p-[1px]">
-                  <div className="w-full h-full rounded-full bg-[#020617] flex items-center justify-center overflow-hidden">
-                    {session.user.image ? (
-                        <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="text-sm font-bold text-white">{session.user.name?.substring(0,2).toUpperCase()}</span>
-                    )}
-                  </div>
+            <>
+              <Link 
+                href="/sell" 
+                className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-white to-slate-100 text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-full hover:from-purple-500 hover:to-pink-500 hover:text-white transition-all shadow-lg hover:shadow-purple-500/30 hover:scale-105 active:scale-95"
+              >
+                <span>⚡</span>
+                Vender Ahora
+              </Link>
+
+              <div className="relative">
+                <div className="flex items-center gap-3 bg-slate-900/50 border border-white/10 hover:border-purple-500/50 p-1.5 pr-4 rounded-full transition-all group">
+                  
+                  <Link 
+                    href="/dashboard"
+                    className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-xs font-black text-white hover:shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-110"
+                    title="Centro de Mando"
+                  >
+                    {session.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "SE"}
+                  </Link>
+
+                  <button 
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className="flex flex-col items-start text-left hover:opacity-80 transition-opacity"
+                  >
+                    <span className="text-[10px] font-black text-white leading-none uppercase truncate max-w-[80px]">
+                      {session.user?.name || "Guerrero"}
+                    </span>
+                    <span className="text-[8px] font-bold text-purple-400 leading-none mt-1">NIVEL 1</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={`ml-1 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}
+                  >
+                    <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 </div>
-                
-                {/* Dropdown simple al hacer hover */}
-                <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform translate-y-2 group-hover:translate-y-0">
-                    <div className="px-4 py-2 border-b border-white/5 mb-1">
-                        <p className="text-[9px] text-slate-400 uppercase font-bold">Mi Cuenta</p>
+
+                {isMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 mt-3 w-64 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-200">
+                      
+                      <div className="p-4 border-b border-white/5 bg-gradient-to-br from-purple-500/10 to-pink-500/5">
+                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Mi Cuenta</p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-black text-white shadow-lg">
+                            {session.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "SE"}
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-white">{session.user?.name || "Guerrero"}</p>
+                            <p className="text-[10px] text-purple-400 font-bold">Nivel 1 • Novato</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-2 space-y-1">
+                        <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-500/10 text-slate-300 hover:text-purple-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">🛰️</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Centro de Mando</span>
+                        </Link>
+                        
+                        {/* NUEVO: Link a Hero */}
+                        <Link href="/hero" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-yellow-500/10 text-slate-300 hover:text-yellow-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">👤</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Mi Héroe</span>
+                          {equippedCount > 0 && (
+                            <span className="ml-auto bg-green-500/20 text-green-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-green-500/30">
+                              {equippedCount} ⚡
+                            </span>
+                          )}
+                        </Link>
+
+                        <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-500/10 text-slate-300 hover:text-blue-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">🛡️</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Perfil</span>
+                        </Link>
+
+                        {/* MEJORADO: Link a inventario */}
+                        <Link href="/inventory" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">🎒</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Arsenal</span>
+                        </Link>
+
+                        {/* NUEVO: Link a tienda */}
+                        <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-orange-500/10 text-slate-300 hover:text-orange-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">🏪</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Tienda</span>
+                        </Link>
+
+                        <div className="h-px bg-white/5 my-2" />
+
+                        <button onClick={() => { setIsMenuOpen(false); handleSignOut(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-300 hover:text-red-400 transition-all group">
+                          <span className="text-lg group-hover:scale-110 transition-transform">🔌</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">Cerrar Sesión</span>
+                        </button>
+                      </div>
                     </div>
-                    <Link href="/profile" className="block px-4 py-2 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors">Perfil de Héroe</Link>
-                    <Link href="/inventory" className="block px-4 py-2 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors">Mi Bodega</Link>
-                    <button 
-                        onClick={() => signOut()} 
-                        className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors mt-1"
-                    >
-                        Cerrar Sesión
-                    </button>
-                </div>
+                  </>
+                )}
               </div>
-            </div>
+            </>
           ) : (
-            // --- ESTADO: NO LOGUEADO (Visitante) ---
             <Link 
-              href="/login"
-              className="text-[10px] font-black text-slate-300 hover:text-white uppercase tracking-widest transition-colors"
+              href="/login" 
+              className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full transition-all shadow-lg shadow-purple-500/30 hover:scale-105 active:scale-95"
             >
-              MI BODEGA (LOGIN)
+              ACCEDER
             </Link>
           )}
 
-          {/* Botón VENDER AHORA (Siempre visible) */}
           <Link 
-            href="/sell"
-            className="hidden md:flex bg-white hover:bg-slate-200 text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)]"
+            href="/cart" 
+            className="relative w-11 h-11 rounded-full bg-slate-900/50 border border-white/10 hover:border-purple-500/50 flex items-center justify-center text-slate-400 hover:text-white transition-all hover:scale-110 active:scale-95"
           >
-            Vender Ahora
+            <span className="text-xl">🛒</span>
+            <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-500 to-pink-500 text-[8px] font-black text-white w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#020617] shadow-lg">
+              0
+            </span>
           </Link>
-
-          {/* Carrito */}
-          <button className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all group">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-white transition-colors">
-              <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-            </svg>
-          </button>
-
         </div>
+
       </div>
     </nav>
   );

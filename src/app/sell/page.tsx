@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+import XPRewardAnimation from "@/components/XPRewardAnimation";
 
 // IMAGEN DE RESPALDO (Holograma de error)
 const PLACEHOLDER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAEsCAMAAACwdH5pAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QzQ3QjUzQjQ3QjQ3MTFFMzg5RDhGMzQ3QjQ3QjQ3QjQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QzQ3QjUzQjU3QjQ3MTFFMzg5RDhGMzQ3QjQ3QjQ3QjQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpDNDdCNTNCMjdBNDcxMUUzODlEOEYzNDdCNDdCNDdCNCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDNDdCNTNCMzdBNDcxMUUzODlEOEYzNDdCNDdCNDdCNCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pol5jXAAAAA1UExURQAAACIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIk0/338AAAARdFJOUwBAgLxdf4Cw37+/gL+/v7+AtivxXQAAAAlwSFlzAAALEgAACxIB0t1+/AAAABhJREFUeNrtwTEBAAAAwqD1T20Kb6AAAAC4AwZgAAEq5p72AAAAAElFTkSuQmCC";
@@ -148,6 +148,9 @@ export default function SellPage() {
   // Estado Lore (Cortex AI)
   const [aiMessage, setAiMessage] = useState("ESPERANDO ENTRADA DE DATOS...");
 
+  // 🎮 NUEVO: Estado para recompensas
+  const [rewardData, setRewardData] = useState<any>(null);
+
   // Efectos de Lore
   useEffect(() => {
       if (isPublishing) setAiMessage("ENCRIPTANDO ACTIVO EN BLOCKCHAIN...");
@@ -264,7 +267,7 @@ export default function SellPage() {
     setSuggestions([]);
   };
 
-  // --- FUNCIÓN DE PUBLICACIÓN BLINDADA (PIPELINE) ---
+  // --- FUNCIÓN DE PUBLICACIÓN CON RECOMPENSAS ---
   const handlePublish = async (e: React.FormEvent) => {
       e.preventDefault();
       
@@ -276,18 +279,15 @@ export default function SellPage() {
       setIsPublishing(true);
 
       try {
-        // === LA FUSIÓN CLAVE: ENVIAR DATOS PARA AUTO-INDEXADO ===
+        // Crear listing
         const response = await fetch('/api/listings/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            // Datos de la Venta
             cardId: selectedCard.id,
             price: finalPrice,
             condition: conditionInput,
             type: listingType,
-            
-            // 🔥 DATOS DE LA CARTA (Para que la DB la conozca)
             cardName: selectedCard.name,
             cardImage: selectedCard.image,
             cardSet: selectedCard.set,
@@ -298,13 +298,29 @@ export default function SellPage() {
         });
 
         if (response.ok) {
-            // Success Effect
+            // 🎮 DAR RECOMPENSAS XP/MONEDAS
+            const rewardResponse = await fetch('/api/user/reward', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'LISTING_CREATED',
+                listingPrice: finalPrice
+              })
+            });
+
+            if (rewardResponse.ok) {
+              const rewardResult = await rewardResponse.json();
+              setRewardData(rewardResult);
+            }
+
+            // Confetti original
             confetti({
                 particleCount: 200,
                 spread: 100,
                 origin: { y: 0.6 },
                 colors: ['#00ffff', '#ff00ff', '#ffff00']
             });
+            
             setIsSuccess(true);
         } else {
             const errorMsg = await response.text();
@@ -321,7 +337,7 @@ export default function SellPage() {
   // Navegación Inteligente al Dashboard
   const handleGoToDashboard = () => {
       router.push('/dashboard');
-      router.refresh(); // <--- RECARGA FORZADA PARA VER LA CARTA NUEVA
+      router.refresh();
   };
 
   const resetForm = () => {
@@ -331,6 +347,7 @@ export default function SellPage() {
       setResults([]);
       setListingType("SALE");
       setPriceInput("");
+      setRewardData(null);
   };
 
   if (isSuccess && selectedCard) {
@@ -361,7 +378,7 @@ export default function SellPage() {
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans selection:bg-purple-500/30 relative overflow-x-hidden">
       
       {/* CRT SCANLINES */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.02] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.02] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%]"></div>
       
       <div className="max-w-7xl mx-auto relative z-10">
         
@@ -582,6 +599,18 @@ export default function SellPage() {
           </div>
         )}
       </div>
+
+      {/* 🎮 ANIMACIÓN DE RECOMPENSAS XP/MONEDAS */}
+      {rewardData && (
+        <XPRewardAnimation
+          xpGained={rewardData.xpGained}
+          coinsGained={rewardData.coinsGained}
+          leveledUp={rewardData.leveledUp}
+          newLevel={rewardData.currentLevel}
+          newRank={rewardData.newRank}
+          onComplete={() => setRewardData(null)}
+        />
+      )}
       
       {/* Global Styles */}
       <style jsx global>{`

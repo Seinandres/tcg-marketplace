@@ -10,7 +10,7 @@ datasource db {
 }
 
 // =========================================================
-// 🔐 MODELOS DE SEGURIDAD (NEXTAUTH) - AGREGADOS
+// 🔐 MODELOS DE SEGURIDAD (NEXTAUTH) - INTACTOS
 // =========================================================
 
 model Account {
@@ -49,32 +49,37 @@ model VerificationToken {
 }
 
 // =========================================================
-// 👤 USUARIO (FUSIONADO: AUTH + RPG)
+// 👤 USUARIO (SISTEMA RPG NIVEL DIOS)
 // =========================================================
 
 model User {
   id             String    @id @default(cuid())
-  name           String?   // Necesario para NextAuth
+  name           String?
   username       String?   @unique
   email          String?   @unique
-  emailVerified  DateTime? // Necesario para NextAuth
-  hashedPassword String?   // Necesario para Login con contraseña
+  emailVerified  DateTime?
+  hashedPassword String?
   image          String?
   
   // Datos Personales
   rut            String?
   walletAddress  String?
   
-  // Sistema RPG & Reputación
-  reputation     Int       @default(0)
-  heroClass      String    @default("warrior")
-  heroColor      String    @default("#3b82f6")
+  // --- SISTEMA RPG & PROGRESO ---
+  reputation     Int       @default(100) // % de fiabilidad
+  heroClass      String    @default("Novato") // Título visible
+  heroColor      String    @default("#3b82f6") // Color del perfil
   heroLevel      Int       @default(1)
-  heroTitle      String?   @default("Iniciado")
-  heroWeapon     String    @default("sword")
+  heroTitle      String?   @default("Recluta")
   heroXP         Int       @default(0)
   
-  // Rol (para diferenciar vendedores)
+  // Economía (NUEVO)
+  coins          Int       @default(100) // Moneda para comprar mejoras/skins
+
+  // Inventario de Items RPG (NUEVO - Armas, Escudos, Buffs)
+  rpgItems       UserItem[]
+  
+  // Rol (Permisos)
   role           String    @default("USER") 
 
   // Relaciones Auth
@@ -90,7 +95,40 @@ model User {
 }
 
 // =========================================================
-// 📦 MARKETPLACE & CARTAS (INTACTO)
+// ⚔️ SISTEMA DE ITEMS & BUFFS (NUEVO)
+// =========================================================
+
+// Definición de los objetos del juego (Ej: "Espada de Visibilidad")
+model RpgItem {
+  id          String   @id @default(cuid())
+  name        String   // Ej: "Propulsor de Ventas Mk1"
+  description String   // Ej: "Destaca tus ventas por 24h"
+  type        String   // WEAPON, SHIELD, BUFF, SKIN
+  rarity      String   // COMMON, RARE, LEGENDARY
+  image       String   // Icono/Imagen del item
+  price       Int      @default(0) // Costo en monedas del juego
+  
+  // Efectos Técnicos (JSON para flexibilidad total)
+  // Ej: { "commissionDiscount": 0.05, "highlightColor": "gold" }
+  effects     String?  
+  
+  users       UserItem[]
+}
+
+// Inventario: Qué usuario tiene qué item
+model UserItem {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  isEquipped Boolean @default(false) // ¿Lo está usando ahora para vender?
+  obtainedAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  item      RpgItem  @relation(fields: [itemId], references: [id])
+}
+
+// =========================================================
+// 📦 MARKETPLACE & CARTAS (MERCADO)
 // =========================================================
 
 model Listing {
@@ -100,9 +138,9 @@ model Listing {
   price     Int
   condition String
   quantity  Int      @default(1)
-  status    String   @default("ACTIVE")
+  status    String   @default("ACTIVE") // ACTIVE, SOLD, CANCELLED
   isNft     Boolean  @default(false)
-  type      String   @default("SALE") // AUCTION o SALE
+  type      String   @default("SALE") // SALE, AUCTION
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -126,15 +164,20 @@ model Bid {
 
 model Card {
   id            String    @id @default(cuid())
-  setId         String
   name          String
-  number        String
-  rarity        String?
-  imageUrlSmall String
+  // Agregué 'image' genérico para compatibilidad con nuestra API nueva
+  image         String?   
+  imageUrlSmall String?   // Mantenemos por compatibilidad con legacy
   imageUrlHiRes String?
+  
+  setId         String?   // Opcional por si creamos cartas custom
+  set           String?   // Nombre del set en texto simple
+  number        String?
+  rarity        String?
+  game          String    @default("Pokemon")
+  
   marketPrice   Float?
   artist        String?
-  game          String    @default("Pokemon")
   hp            String?
   subtypes      String[]
   supertype     String?
@@ -143,7 +186,8 @@ model Card {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   
-  set           CardSet   @relation(fields: [setId], references: [id])
+  // Relación opcional con CardSet (por si usamos la API de TCG externa o custom)
+  cardSetRel    CardSet?  @relation(fields: [setId], references: [id])
   listings      Listing[]
 }
 
@@ -161,15 +205,19 @@ model CardSet {
   cards        Card[]
 }
 
+// =========================================================
+// 🛒 E-COMMERCE & HISTORIAL
+// =========================================================
+
 model CartItem {
-  id        String @id
+  id        String @id @default(cuid())
   userId    String
   listingId String
   quantity  Int    @default(1)
 }
 
 model Order {
-  id        String   @id
+  id        String   @id @default(cuid())
   buyerId   String
   sellerId  String
   listingId String
@@ -179,19 +227,19 @@ model Order {
 }
 
 model PriceHistory {
-  id     String   @id
+  id     String   @id @default(cuid())
   cardId String
   date   DateTime @default(now())
   price  Int
 }
 
 model Subscription {
-  id               String   @id
+  id               String   @id @default(cuid())
   userId           String   @unique
   stripeCustomerId String   @unique
   stripePriceId    String
   status           String
   currentPeriodEnd DateTime
   createdAt        DateTime @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
 }

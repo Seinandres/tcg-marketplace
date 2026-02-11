@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* src/app/globals.css */
+@keyframes scan-vertical {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+.animate-scan-vertical {
+  animation: scan-vertical 2s linear infinite;
+}
