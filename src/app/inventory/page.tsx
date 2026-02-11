@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import InventoryRPG from "@/components/InventoryRPG"; 
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// 🟢 CORRECCIÓN TÁCTICA: Importamos desde la librería central
+import { authOptions } from "@/lib/auth"; 
 import { redirect } from "next/navigation";
 
 // Forzar renderizado dinámico para ver cambios al instante
@@ -14,8 +15,10 @@ async function getUserInventory() {
     return null;
   }
 
+  // Obtener usuario con sus cartas
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true } // Solo necesitamos el ID para buscar los items
   });
 
   if (!user) return null;
@@ -33,12 +36,12 @@ async function getUserInventory() {
 
 export default async function InventoryPage() {
   const listings = await getUserInventory();
-  
+
   // Si no hay sesión, mandarlo al login
-  if (!listings && listings !== []) {
+  if (!listings) {
     redirect('/login');
   }
-  
+
   return (
     <InventoryRPG listings={listings} />
   );

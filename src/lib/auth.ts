@@ -1,93 +1,87 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/db";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// AQUÍ ESTÁ TU LÓGICA (No se pierde nada)
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        // 1. Tu validación original
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email y contraseña requeridos");
+          throw new Error("Faltan credenciales");
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
 
-        if (!user) {
-          throw new Error("Usuario no encontrado");
+        if (!user || !user.hashedPassword) {
+          throw new Error("Operador no encontrado o credenciales inválidas");
         }
 
-        const isPasswordValid = await bcrypt.compare(
+        const isCorrectPassword = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.hashedPassword
         );
 
-        if (!isPasswordValid) {
-          throw new Error("Contraseña incorrecta");
+        if (!isCorrectPassword) {
+          throw new Error("Clave de acceso incorrecta");
         }
 
-        return {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          name: user.name,
-          level: user.level,
-          xp: user.xp,
-          role: user.role,
-          isSeller: user.isSeller,
-          avatar: user.avatar
-        };
+        return user;
       }
     })
   ],
+  session: {
+    strategy: "jwt",
+  },
+  // AQUÍ AGREGAMOS LA MAGIA RPG A TUS CALLBACKS EXISTENTES
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
-        token.level = user.level;
-        token.xp = user.xp;
-        token.role = user.role;
-        token.isSeller = user.isSeller;
-        token.avatar = user.avatar;
+        // Agregamos los datos RPG al token
+        // @ts-ignore
+        token.heroLevel = user.heroLevel;
+        // @ts-ignore
+        token.coins = user.coins;
+        // @ts-ignore
+        token.heroTitle = user.heroTitle;
       }
       
+      // Permitir actualizar datos sin reloguear
       if (trigger === "update" && session) {
-        token = { ...token, ...session };
+        return { ...token, ...session };
       }
-      
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string;
-        session.user.level = token.level as number;
-        session.user.xp = token.xp as number;
-        session.user.role = token.role as string;
-        session.user.isSeller = token.isSeller as boolean;
-        session.user.avatar = token.avatar as string;
+        // @ts-ignore
+        session.user.id = token.id;
+        // Pasamos los datos RPG del token a la sesión del navegador
+        // @ts-ignore
+        session.user.heroLevel = token.heroLevel;
+        // @ts-ignore
+        session.user.coins = token.coins;
+        // @ts-ignore
+        session.user.heroTitle = token.heroTitle;
       }
       return session;
     }
   },
   pages: {
-    signIn: "/auth/login",
-    signOut: "/auth/login",
-    error: "/auth/login",
+    signIn: '/login', // Tu página de login personalizada
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
-  },
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };

@@ -1,25 +1,32 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+// Importamos el Provider que creamos en el paso 1
+import SessionProvider from "@/components/providers/SessionProvider";
 import Navbar from "@/components/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SEINA MARKET - Chile",
-  description: "Marketplace táctico de TCG",
+  title: "Seina Market | TCG Marketplace",
+  description: "El mejor mercado de cartas coleccionables de Chile",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="es">
       <body className={inter.className}>
-        <Navbar />
-        {children}
+        {/* El Provider envuelve TODO para que la sesión fluya por toda la app */}
+        <SessionProvider>
+          <Navbar /> 
+          <main>
+            {children}
+          </main>
+        </SessionProvider>
       </body>
     </html>
   );

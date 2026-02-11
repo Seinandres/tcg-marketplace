@@ -1,5 +1,4 @@
-// prisma/schema.prisma
-
+// generator y datasource iniciales
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,11 +13,11 @@ datasource db {
 // =========================================================
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
   refresh_token      String? @db.Text
   access_token       String? @db.Text
   expires_at         Int?
@@ -73,10 +72,10 @@ model User {
   heroTitle      String?   @default("Recluta")
   heroXP         Int       @default(0)
   
-  // Economía (NUEVO)
+  // Economía
   coins          Int       @default(100) // Moneda para comprar mejoras/skins
 
-  // Inventario de Items RPG (NUEVO - Armas, Escudos, Buffs)
+  // Inventario de Items RPG
   rpgItems       UserItem[]
   
   // Rol (Permisos)
@@ -95,36 +94,37 @@ model User {
 }
 
 // =========================================================
-// ⚔️ SISTEMA DE ITEMS & BUFFS (NUEVO)
+// ⚔️ SISTEMA DE ITEMS & BUFFS (CON LORE Y BENEFICIOS)
 // =========================================================
 
-// Definición de los objetos del juego (Ej: "Espada de Visibilidad")
 model RpgItem {
-  id          String   @id @default(cuid())
-  name        String   // Ej: "Propulsor de Ventas Mk1"
-  description String   // Ej: "Destaca tus ventas por 24h"
-  type        String   // WEAPON, SHIELD, BUFF, SKIN
-  rarity      String   // COMMON, RARE, LEGENDARY
-  image       String   // Icono/Imagen del item
-  price       Int      @default(0) // Costo en monedas del juego
+  id            String   @id @default(cuid())
+  name          String   // Ej: "Espada del Trader"
+  description   String   // Ej: "Destaca tus ventas por 24h"
+  lore          String?  @db.Text // Historia épica e inmersiva
+  benefits      String?  @db.Text // Beneficios reales (ej: "-5% Fees")
+  type          String   // WEAPON, SHIELD, BUFF, SKIN
+  rarity        String   // COMMON, RARE, EPIC, LEGENDARY
+  image         String   // Icono/Imagen del item
+  price         Int      @default(0) // Costo en monedas del juego
+  requiredLevel Int      @default(1) // Nivel requerido para equipar
   
   // Efectos Técnicos (JSON para flexibilidad total)
-  // Ej: { "commissionDiscount": 0.05, "highlightColor": "gold" }
-  effects     String?  
+  effects       String?  
   
-  users       UserItem[]
+  users         UserItem[]
 }
 
 // Inventario: Qué usuario tiene qué item
 model UserItem {
-  id        String   @id @default(cuid())
-  userId    String
-  itemId    String
-  isEquipped Boolean @default(false) // ¿Lo está usando ahora para vender?
+  id         String   @id @default(cuid()) // <-- CORREGIDO: @id definido solo una vez
+  userId     String
+  itemId     String
+  isEquipped Boolean  @default(false) 
   obtainedAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  item      RpgItem  @relation(fields: [itemId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  item       RpgItem  @relation(fields: [itemId], references: [id])
 }
 
 // =========================================================
@@ -165,13 +165,12 @@ model Bid {
 model Card {
   id            String    @id @default(cuid())
   name          String
-  // Agregué 'image' genérico para compatibilidad con nuestra API nueva
   image         String?   
-  imageUrlSmall String?   // Mantenemos por compatibilidad con legacy
+  imageUrlSmall String?   
   imageUrlHiRes String?
   
-  setId         String?   // Opcional por si creamos cartas custom
-  set           String?   // Nombre del set en texto simple
+  setId         String?   
+  set           String?   
   number        String?
   rarity        String?
   game          String    @default("Pokemon")
@@ -186,7 +185,6 @@ model Card {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   
-  // Relación opcional con CardSet (por si usamos la API de TCG externa o custom)
   cardSetRel    CardSet?  @relation(fields: [setId], references: [id])
   listings      Listing[]
 }

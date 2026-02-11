@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import ProfileRPG from "@/components/ProfileRPG";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// 🟢 CORRECCIÓN CRÍTICA: Importamos desde la librería centralizada, no desde la ruta API
+import { authOptions } from "@/lib/auth"; 
 import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
 async function getUserProfile() {
+  // Obtenemos la sesión usando la configuración centralizada
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.email) {
@@ -23,7 +25,7 @@ async function getUserProfile() {
 
   if (!user) return null;
 
-  // Calculamos stats simples
+  // Calculamos stats de combate financiero
   const activeListings = user.listings.filter(l => l.status === 'ACTIVE').length;
   const soldListings = user.listings.filter(l => l.status === 'SOLD').length;
 
@@ -32,7 +34,8 @@ async function getUserProfile() {
     image: user.image || "",
     heroLevel: user.heroLevel,
     heroXP: user.heroXP,
-    heroTitle: user.heroTitle || "Recluta",
+    // Mejora: "Novato" es el título base que definimos en el registro
+    heroTitle: user.heroTitle || "Novato", 
     coins: user.coins,
     reputation: user.reputation,
     listingsCount: activeListings,
@@ -44,6 +47,7 @@ export default async function ProfilePage() {
   const profile = await getUserProfile();
   
   if (!profile) {
+    // Si no hay perfil, redirigir al login unificado
     redirect('/login');
   }
   

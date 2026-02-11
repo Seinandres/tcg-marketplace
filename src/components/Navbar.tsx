@@ -2,44 +2,39 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+// Importamos los hooks oficiales para manejar la sesión y el logout
+import { useSession, signOut } from "next-auth/react";
 
 export default function Navbar() {
-  const router = useRouter();
   const pathname = usePathname();
+  // useSession detecta automáticamente cambios. 'status' nos dice si está cargando.
+  const { data: session, status } = useSession();
+  const isLoading = status === "loading";
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [session, setSession] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [equippedCount, setEquippedCount] = useState(0);
 
+  // Efecto para cargar datos RPG extras solo si hay sesión
   useEffect(() => {
-    fetch('/api/auth/session')
-      .then(res => res.json())
-      .then(data => {
-        setSession(data);
-        setIsLoading(false);
-        
-        if (data?.user) {
-          fetch('/api/inventory')
-            .then(res => res.json())
-            .then(invData => {
-              setEquippedCount(invData.stats?.equipped || 0);
-            })
-            .catch(() => {});
-        }
-      })
-      .catch(() => {
-        setSession(null);
-        setIsLoading(false);
-      });
-  }, [pathname]);
+    if (session?.user) {
+      fetch('/api/inventory')
+        .then(res => res.json())
+        .then(invData => {
+          setEquippedCount(invData.stats?.equipped || 0);
+        })
+        .catch(() => setEquippedCount(0));
+    }
+  }, [session, pathname]); // Se actualiza si cambia la sesión o la página
 
+  // Función de Logout Blindada
   const handleSignOut = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' });
-    setSession(null);
-    router.push('/login');
+    setIsMenuOpen(false);
+    // signOut se encarga de borrar cookies, limpiar estado y redirigir
+    await signOut({ callbackUrl: "/login" });
   };
 
+  // Skeleton de carga (Mantenemos tu diseño de carga)
   if (isLoading) {
     return (
       <nav className="sticky top-0 z-[100] bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl">
@@ -55,6 +50,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-[100] bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl">
       <div className="max-w-[1400px] mx-auto flex items-center justify-between">
         
+        {/* === LOGO === */}
         <div className="flex items-center gap-10">
           <Link href={session ? "/dashboard" : "/"} className="flex items-center gap-3 group">
             <span className="text-3xl font-black italic tracking-tighter text-white group-hover:text-purple-400 transition-colors">
@@ -65,6 +61,7 @@ export default function Navbar() {
             </span>
           </Link>
 
+          {/* MENÚ PRINCIPAL (DESKTOP) */}
           <div className="hidden lg:flex items-center gap-8">
             <Link 
               href={session ? "/dashboard" : "/"} 
@@ -91,7 +88,6 @@ export default function Navbar() {
               SELLADO
             </Link>
             
-            {/* NUEVO: Link a la tienda */}
             {session?.user && (
               <Link 
                 href="/shop" 
@@ -112,10 +108,12 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* === USUARIO / ACCIONES === */}
         <div className="flex items-center gap-4">
           
           {session?.user ? (
             <>
+              {/* BOTÓN VENDER */}
               <Link 
                 href="/sell" 
                 className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-white to-slate-100 text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-full hover:from-purple-500 hover:to-pink-500 hover:text-white transition-all shadow-lg hover:shadow-purple-500/30 hover:scale-105 active:scale-95"
@@ -124,9 +122,11 @@ export default function Navbar() {
                 Vender Ahora
               </Link>
 
+              {/* DROPDOWN USUARIO */}
               <div className="relative">
                 <div className="flex items-center gap-3 bg-slate-900/50 border border-white/10 hover:border-purple-500/50 p-1.5 pr-4 rounded-full transition-all group">
                   
+                  {/* Avatar Clickable */}
                   <Link 
                     href="/dashboard"
                     className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-xs font-black text-white hover:shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-110"
@@ -135,6 +135,7 @@ export default function Navbar() {
                     {session.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "SE"}
                   </Link>
 
+                  {/* Gatillo Menú */}
                   <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                     className="flex flex-col items-start text-left hover:opacity-80 transition-opacity"
@@ -155,11 +156,13 @@ export default function Navbar() {
                   </button>
                 </div>
 
+                {/* MENÚ DESPLEGABLE */}
                 {isMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
                     <div className="absolute right-0 mt-3 w-64 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-200">
                       
+                      {/* Header Menú */}
                       <div className="p-4 border-b border-white/5 bg-gradient-to-br from-purple-500/10 to-pink-500/5">
                         <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Mi Cuenta</p>
                         <div className="flex items-center gap-3">
@@ -173,13 +176,13 @@ export default function Navbar() {
                         </div>
                       </div>
                       
+                      {/* Links Menú */}
                       <div className="p-2 space-y-1">
                         <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-500/10 text-slate-300 hover:text-purple-400 transition-all group">
                           <span className="text-lg group-hover:scale-110 transition-transform">🛰️</span>
                           <span className="text-[10px] font-black uppercase tracking-wider">Centro de Mando</span>
                         </Link>
                         
-                        {/* NUEVO: Link a Hero */}
                         <Link href="/hero" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-yellow-500/10 text-slate-300 hover:text-yellow-400 transition-all group">
                           <span className="text-lg group-hover:scale-110 transition-transform">👤</span>
                           <span className="text-[10px] font-black uppercase tracking-wider">Mi Héroe</span>
@@ -195,13 +198,11 @@ export default function Navbar() {
                           <span className="text-[10px] font-black uppercase tracking-wider">Perfil</span>
                         </Link>
 
-                        {/* MEJORADO: Link a inventario */}
                         <Link href="/inventory" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-400 transition-all group">
                           <span className="text-lg group-hover:scale-110 transition-transform">🎒</span>
                           <span className="text-[10px] font-black uppercase tracking-wider">Arsenal</span>
                         </Link>
 
-                        {/* NUEVO: Link a tienda */}
                         <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-orange-500/10 text-slate-300 hover:text-orange-400 transition-all group">
                           <span className="text-lg group-hover:scale-110 transition-transform">🏪</span>
                           <span className="text-[10px] font-black uppercase tracking-wider">Tienda</span>
@@ -209,6 +210,7 @@ export default function Navbar() {
 
                         <div className="h-px bg-white/5 my-2" />
 
+                        {/* BOTÓN CERRAR SESIÓN (LOGOUT) */}
                         <button onClick={() => { setIsMenuOpen(false); handleSignOut(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-300 hover:text-red-400 transition-all group">
                           <span className="text-lg group-hover:scale-110 transition-transform">🔌</span>
                           <span className="text-[10px] font-black uppercase tracking-wider">Cerrar Sesión</span>
@@ -220,6 +222,7 @@ export default function Navbar() {
               </div>
             </>
           ) : (
+            // BOTÓN ACCEDER (SI NO HAY SESIÓN)
             <Link 
               href="/login" 
               className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full transition-all shadow-lg shadow-purple-500/30 hover:scale-105 active:scale-95"
@@ -228,6 +231,7 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* CARRITO (SIEMPRE VISIBLE) */}
           <Link 
             href="/cart" 
             className="relative w-11 h-11 rounded-full bg-slate-900/50 border border-white/10 hover:border-purple-500/50 flex items-center justify-center text-slate-400 hover:text-white transition-all hover:scale-110 active:scale-95"

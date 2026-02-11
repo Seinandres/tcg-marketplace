@@ -37,23 +37,3 @@ export async function GET(
     );
   }
 }
-```
-
----
-
-## PASO 5: Verifica que page.tsx esté correcto
-
-**Archivo:** `src/app/listing/[id]/page.tsx` (debe tener el código que te envié antes con `"use client"`)
-
----
-
-## ✅ ESTRUCTURA FINAL CORRECTA
-```
-src/app/
-├── api/
-│   └── listings/
-│       └── [id]/
-│           └── route.ts       ← API endpoint en /api/listings/123
-└── listing/
-    └── [id]/
-        └── page.tsx           ← Página visual en /listing/123

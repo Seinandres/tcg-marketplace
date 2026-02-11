@@ -1,4 +1,3 @@
-// src/app/register/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -13,8 +12,8 @@ export default function RegisterPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   
   // Estados para la animación de "Reveal"
-  const [isFlipped, setIsFlipped] = useState(false); // La carta empieza boca abajo
-  const [showContent, setShowContent] = useState(false); // Retraso para textos
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [showContent, setShowContent] = useState(false);
 
   // --- LÓGICA TILT 3D ---
   const cardRef = useRef<HTMLDivElement>(null);
@@ -28,8 +27,9 @@ export default function RegisterPage() {
     const y = e.clientY - box.top;
     const centerX = box.width / 2;
     const centerY = box.height / 2;
-    const rotateX = (y - centerY) / 10;
-    const rotateY = (centerX - x) / 10;
+    // Reducimos la intensidad para que sea sutil y elegante
+    const rotateX = (y - centerY) / 15;
+    const rotateY = (centerX - x) / 15;
 
     setRotate({ x: rotateX, y: rotateY });
   };
@@ -43,26 +43,32 @@ export default function RegisterPage() {
   useEffect(() => {
     if (showSuccess) {
       // 1. Esperamos 600ms con la carta boca abajo (Suspenso)
-      setTimeout(() => {
+      const flipTimer = setTimeout(() => {
         setIsFlipped(true); // ¡GIRA LA CARTA!
         
         // 2. Disparamos confeti justo cuando la carta se revela
         confetti({
           particleCount: 150,
-          spread: 70,
+          spread: 80,
           origin: { y: 0.6 },
-          colors: ['#a855f7', '#22c55e', '#ffffff', '#fbbf24']
+          colors: ['#a855f7', '#3b82f6', '#ffffff', '#fbbf24'],
+          disableForReducedMotion: true
         });
       }, 600);
 
       // 3. Mostramos los botones y textos laterales un poco después
-      setTimeout(() => {
+      const contentTimer = setTimeout(() => {
         setShowContent(true);
       }, 1000);
+
+      return () => {
+        clearTimeout(flipTimer);
+        clearTimeout(contentTimer);
+      };
     }
   }, [showSuccess]);
 
-  const registerUser = async (e: any) => {
+  const registerUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
@@ -75,39 +81,35 @@ export default function RegisterPage() {
 
       if (response.ok) {
         setShowSuccess(true);
-        setLoading(false);
       } else {
         const errorText = await response.text();
         const cleanError = errorText.replace(/"/g, ''); 
         alert("⚠️ Misión fallida: " + cleanError);
-        setLoading(false);
       }
     } catch (error) {
-      alert("Error de conexión.");
+      console.error(error);
+      alert("Error de conexión con el servidor central.");
+    } finally {
       setLoading(false);
     }
   }
 
-  const handleNavigation = (path: string) => {
-    router.push('/login'); 
-  };
-
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center relative overflow-hidden font-sans selection:bg-purple-500/30">
       
       {/* ==================== MODAL DE EXPERIENCIA "PACK OPENING" ==================== */}
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-500">
           
           {/* Fondo Cibernético Animado */}
           <div className="absolute inset-0 opacity-20 pointer-events-none">
              <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(168,85,247,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.1)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]"></div>
           </div>
 
-          <div className="relative w-full max-w-5xl text-center z-10">
+          <div className="relative w-full max-w-6xl text-center z-10 flex flex-col items-center">
             
             {/* Título que aparece suavemente */}
-            <div className={`mb-12 transition-all duration-1000 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
+            <div className={`mb-12 transition-all duration-1000 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
               <h2 className="text-5xl md:text-7xl font-black italic uppercase text-white tracking-tighter drop-shadow-[0_0_35px_rgba(168,85,247,0.6)]">
                 GUERRERO <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 animate-pulse">DESPERTADO</span>
               </h2>
@@ -127,19 +129,18 @@ export default function RegisterPage() {
                   style={{
                     transformStyle: 'preserve-3d',
                     transform: isFlipped 
-                      ? `rotateY(180deg) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)` // Si giró, aplicamos tilt al frente
-                      : `rotateY(0deg) rotateX(${rotate.x/2}deg) rotateY(${rotate.y/2}deg)` // Si no, tilt a la espalda
+                      ? `rotateY(180deg) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)` 
+                      : `rotateY(0deg) rotateX(${rotate.x/2}deg) rotateY(${rotate.y/2}deg)`
                   }}
                 >
                   
                   {/* --- CARA TRASERA (BOCA ABAJO - SEINA LOGO) --- */}
                   <div className="absolute inset-0 w-full h-full bg-slate-900 rounded-2xl border border-white/10 shadow-2xl flex items-center justify-center backface-hidden z-20 overflow-hidden">
-                    {/* Patrón de la espalda */}
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
                     
                     <div className="relative z-10 animate-pulse">
-                      <div className="w-24 h-24 rounded-full border-4 border-slate-700 flex items-center justify-center bg-slate-950">
+                      <div className="w-24 h-24 rounded-full border-4 border-slate-700 flex items-center justify-center bg-slate-950 shadow-inner">
                          <span className="text-3xl font-black text-slate-700 italic">SE</span>
                       </div>
                     </div>
@@ -150,7 +151,7 @@ export default function RegisterPage() {
                     ref={cardRef}
                     className="absolute inset-0 w-full h-full bg-gradient-to-b from-slate-900 to-black rounded-2xl border border-white/20 p-6 flex flex-col items-center justify-between shadow-[0_0_50px_rgba(168,85,247,0.3)] backface-hidden [transform:rotateY(180deg)] overflow-hidden"
                   >
-                    {/* Efecto Holográfico Automático (Barrido de brillo) */}
+                    {/* Efecto Holográfico Automático */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent z-30 w-[200%] h-full animate-[shimmer_3s_infinite_linear] pointer-events-none" />
                     
                     {/* Header Carta */}
@@ -164,14 +165,13 @@ export default function RegisterPage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-md opacity-50 animate-pulse"></div>
                       <div className="relative w-full h-full rounded-full bg-slate-950 p-1 border-2 border-white/10">
                          <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
-                            {/* Aquí iría la imagen del usuario real si la tuviera */}
                             <span className="text-5xl filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">👾</span>
                          </div>
                       </div>
                     </div>
 
-                    <div className="relative z-10 text-center">
-                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 drop-shadow-lg">{data.name}</h3>
+                    <div className="relative z-10 text-center w-full">
+                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 drop-shadow-lg truncate">{data.name}</h3>
                       <div className="flex items-center justify-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         <p className="text-[10px] text-green-400 uppercase font-bold tracking-[0.2em]">Online</p>
@@ -204,8 +204,8 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Botón Bodega */}
-                <button 
-                  onClick={() => handleNavigation('/inventory')}
+                <Link 
+                  href="/inventory"
                   className="group relative flex items-center justify-between bg-slate-800 border-2 border-slate-700 hover:border-green-500 p-5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:-translate-y-1"
                 >
                   <div className="flex items-center gap-4">
@@ -218,11 +218,11 @@ export default function RegisterPage() {
                     </div>
                   </div>
                   <span className="text-slate-500 group-hover:text-green-400 transition-colors">➜</span>
-                </button>
+                </Link>
 
                 {/* Botón Perfil */}
-                <button 
-                  onClick={() => handleNavigation('/profile')}
+                <Link 
+                  href="/profile"
                   className="group relative flex items-center justify-between bg-slate-800 border-2 border-slate-700 hover:border-blue-500 p-5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-1"
                 >
                   <div className="flex items-center gap-4">
@@ -235,10 +235,10 @@ export default function RegisterPage() {
                     </div>
                   </div>
                   <span className="text-slate-500 group-hover:text-blue-400 transition-colors">➜</span>
-                </button>
+                </Link>
 
                 <p className="text-[9px] text-center text-slate-600 mt-4 font-mono">
-                  SISTEMA DE SEGURIDAD: REQUIERE LOGIN
+                  SISTEMA DE SEGURIDAD: REQUIERE LOGIN PREVIO
                 </p>
               </div>
 
@@ -247,7 +247,7 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Fondos y Formulario (Sin cambios funcionales) */}
+      {/* Fondos y Formulario */}
       <div className="absolute inset-0 pointer-events-none">
          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#020617] to-[#020617]" />
          <div className="absolute bottom-0 right-0 w-full h-[500px] bg-gradient-to-t from-purple-900/10 to-transparent" />
@@ -313,6 +313,14 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
+      
+      {/* Estilos globales para animaciones */}
+      <style jsx global>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-150%); }
+          100% { transform: translateX(150%); }
+        }
+      `}</style>
     </div>
   );
 }
